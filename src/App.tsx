@@ -186,6 +186,7 @@ function App() {
           <RecordConversationScreen
             onBack={() => navigate('home')}
             onSave={() => navigate('home')}
+            onCreateContact={() => navigate('add-contact')}
             contacts={contacts}
           />
         );

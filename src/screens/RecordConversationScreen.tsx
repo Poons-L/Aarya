@@ -1,14 +1,15 @@
 import { useState, useEffect } from 'react';
-import { ArrowLeft, Mic, Square, Play, Pause, User, X, Check, Tag } from 'lucide-react';
+import { ArrowLeft, Mic, Square, Play, Pause, User, X, Check, Tag, UserPlus } from 'lucide-react';
 import { Contact } from '../hooks/useContacts';
 
 interface RecordConversationScreenProps {
   onBack: () => void;
   onSave: () => void;
+  onCreateContact?: () => void;
   contacts?: Contact[];
 }
 
-export function RecordConversationScreen({ onBack, onSave, contacts = [] }: RecordConversationScreenProps) {
+export function RecordConversationScreen({ onBack, onSave, onCreateContact, contacts = [] }: RecordConversationScreenProps) {
   const [isRecording, setIsRecording] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
   const [recordingTime, setRecordingTime] = useState(0);
@@ -59,6 +60,14 @@ export function RecordConversationScreen({ onBack, onSave, contacts = [] }: Reco
     setShowSummary(false);
     setSelectedContact(null);
     setTags('');
+    onBack();
+  };
+
+  const handleCancelRecording = () => {
+    setIsRecording(false);
+    setIsPaused(false);
+    setTranscript('');
+    setRecordingTime(0);
   };
 
   const handleSaveRecording = () => {
@@ -103,32 +112,54 @@ export function RecordConversationScreen({ onBack, onSave, contacts = [] }: Reco
             <label className="block text-sm font-medium text-slate-700 mb-2">
               Attach to Contact (Optional)
             </label>
-            <div className="space-y-2 max-h-48 overflow-y-auto">
-              {contacts.slice(0, 5).map(contact => (
-                <button
-                  key={contact.id}
-                  onClick={() => setSelectedContact(contact.id === selectedContact ? null : contact.id)}
-                  className={`w-full flex items-center gap-3 p-3 rounded-xl border-2 transition-colors ${
-                    selectedContact === contact.id
-                      ? 'border-orange-500 bg-orange-50'
-                      : 'border-slate-200 bg-white active:bg-slate-50'
-                  }`}
-                >
-                  <div className="w-10 h-10 bg-gradient-to-br from-orange-500 to-amber-400 rounded-full flex items-center justify-center text-white font-bold">
-                    {contact.name.charAt(0)}
-                  </div>
-                  <div className="flex-1 text-left">
-                    <div className="font-semibold text-slate-900">{contact.name}</div>
-                    {contact.company && (
-                      <div className="text-sm text-slate-600">{contact.company}</div>
+
+            {onCreateContact && (
+              <button
+                onClick={onCreateContact}
+                className="w-full flex items-center gap-3 p-3 rounded-xl border-2 border-dashed border-orange-500 bg-orange-50 active:bg-orange-100 transition-colors mb-3"
+              >
+                <div className="w-10 h-10 bg-gradient-to-br from-orange-500 to-amber-400 rounded-full flex items-center justify-center">
+                  <UserPlus size={20} className="text-white" />
+                </div>
+                <div className="flex-1 text-left">
+                  <div className="font-bold text-orange-700">Create New Contact</div>
+                  <div className="text-sm text-orange-600">Add this person to your contacts</div>
+                </div>
+              </button>
+            )}
+
+            {contacts.length > 0 ? (
+              <div className="space-y-2 max-h-48 overflow-y-auto">
+                {contacts.slice(0, 5).map(contact => (
+                  <button
+                    key={contact.id}
+                    onClick={() => setSelectedContact(contact.id === selectedContact ? null : contact.id)}
+                    className={`w-full flex items-center gap-3 p-3 rounded-xl border-2 transition-colors ${
+                      selectedContact === contact.id
+                        ? 'border-orange-500 bg-orange-50'
+                        : 'border-slate-200 bg-white active:bg-slate-50'
+                    }`}
+                  >
+                    <div className="w-10 h-10 bg-gradient-to-br from-orange-500 to-amber-400 rounded-full flex items-center justify-center text-white font-bold">
+                      {contact.name.charAt(0)}
+                    </div>
+                    <div className="flex-1 text-left">
+                      <div className="font-semibold text-slate-900">{contact.name}</div>
+                      {contact.company && (
+                        <div className="text-sm text-slate-600">{contact.company}</div>
+                      )}
+                    </div>
+                    {selectedContact === contact.id && (
+                      <Check size={20} className="text-orange-600" />
                     )}
-                  </div>
-                  {selectedContact === contact.id && (
-                    <Check size={20} className="text-orange-600" />
-                  )}
-                </button>
-              ))}
-            </div>
+                  </button>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-6 text-slate-500 text-sm">
+                No contacts yet. Create one above to attach this recording.
+              </div>
+            )}
           </div>
 
           <div>
@@ -226,12 +257,21 @@ export function RecordConversationScreen({ onBack, onSave, contacts = [] }: Reco
 
       <div className="px-6 pb-12 flex flex-col items-center gap-6">
         {isRecording && (
-          <button
-            onClick={() => setIsPaused(!isPaused)}
-            className="w-16 h-16 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center active:scale-95 transition-transform"
-          >
-            {isPaused ? <Play size={28} /> : <Pause size={28} />}
-          </button>
+          <div className="flex items-center gap-4">
+            <button
+              onClick={handleCancelRecording}
+              className="px-6 py-3 bg-white/20 backdrop-blur-sm rounded-full text-white font-semibold active:scale-95 transition-transform flex items-center gap-2"
+            >
+              <X size={20} />
+              Cancel
+            </button>
+            <button
+              onClick={() => setIsPaused(!isPaused)}
+              className="w-16 h-16 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center active:scale-95 transition-transform"
+            >
+              {isPaused ? <Play size={28} /> : <Pause size={28} />}
+            </button>
+          </div>
         )}
 
         <button

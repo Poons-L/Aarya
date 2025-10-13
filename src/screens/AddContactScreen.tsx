@@ -42,7 +42,7 @@ export function AddContactScreen({ onBack, onSave }: AddContactScreenProps) {
     return (
       <div className="h-full bg-white flex flex-col">
         <div className="px-6 py-4 flex items-center border-b border-slate-200">
-          <button onClick={onBack} className="p-2 -ml-2 active:bg-slate-100 rounded-full transition-colors">
+          <button onClick={onBack} className="p-2 -ml-2 active:bg-slate-100 rounded-full transition-colors" aria-label="Go back">
             <ArrowLeft size={24} className="text-slate-700" />
           </button>
           <h1 className="text-xl font-bold text-slate-900 ml-4">Add Contact</h1>
@@ -185,7 +185,7 @@ export function AddContactScreen({ onBack, onSave }: AddContactScreenProps) {
     <div className="h-full bg-white flex flex-col">
       <div className="px-6 py-4 flex items-center justify-between border-b border-slate-200">
         <div className="flex items-center">
-          <button onClick={onBack} className="p-2 -ml-2 active:bg-slate-100 rounded-full transition-colors">
+          <button onClick={onBack} className="p-2 -ml-2 active:bg-slate-100 rounded-full transition-colors" aria-label="Go back">
             <ArrowLeft size={24} className="text-slate-700" />
           </button>
           <h1 className="text-xl font-bold text-slate-900 ml-4">Contact Details</h1>
@@ -235,9 +235,13 @@ export function AddContactScreen({ onBack, onSave }: AddContactScreenProps) {
             <User size={20} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
             <input
               type="text"
+              id="contact-name"
+              name="name"
               value={formData.name}
               onChange={(e) => handleChange('name', e.target.value)}
               placeholder="John Doe"
+              aria-label="Full name"
+              aria-required="true"
               className="w-full pl-12 pr-4 py-3.5 border-2 border-slate-200 rounded-xl focus:border-orange-500 focus:outline-none transition-colors"
               required
             />
