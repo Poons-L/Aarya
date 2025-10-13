@@ -1,0 +1,13 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer utilities {
+  .active\:scale-98:active {
+    transform: scale(0.98);
+  }
+}
+
+* {
+  -webkit-tap-highlight-color: transparent;
+}
