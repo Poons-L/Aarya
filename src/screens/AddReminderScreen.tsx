@@ -229,6 +229,17 @@ export function AddReminderScreen({ onBack, onSave }: AddReminderScreenProps) {
           </div>
         </div>
       </form>
+
+      <div className="px-6 py-4 bg-white border-t border-slate-200">
+        <button
+          type="submit"
+          form="reminder-form"
+          disabled={loading}
+          className="w-full bg-gradient-to-r from-orange-500 to-amber-500 text-white font-bold py-4 rounded-2xl shadow-lg active:scale-95 transition-transform disabled:opacity-50"
+        >
+          {loading ? 'Setting Reminder...' : 'Set Reminder'}
+        </button>
+      </div>
     </div>
   );
 }

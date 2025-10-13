@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { MobileFrame } from './components/MobileFrame';
 import { WelcomeScreen } from './screens/WelcomeScreen';
+import { OnboardingScreen } from './screens/OnboardingScreen';
 import { AuthScreen } from './screens/AuthScreen';
 import { HomeScreen } from './screens/HomeScreen';
 import { AddContactScreen } from './screens/AddContactScreen';
@@ -16,6 +17,7 @@ import { useReminders } from './hooks/useReminders';
 
 type Screen =
   | 'welcome'
+  | 'onboarding'
   | 'auth'
   | 'home'
   | 'add-contact'
@@ -122,7 +124,10 @@ function App() {
   const renderScreen = () => {
     switch (currentScreen) {
       case 'welcome':
-        return <WelcomeScreen onGetStarted={() => navigate('auth')} />;
+        return <WelcomeScreen onGetStarted={() => navigate('onboarding')} />;
+
+      case 'onboarding':
+        return <OnboardingScreen onComplete={() => navigate('auth')} />;
 
       case 'auth':
         return (
@@ -181,6 +186,7 @@ function App() {
           <RecordConversationScreen
             onBack={() => navigate('home')}
             onSave={() => navigate('home')}
+            contacts={contacts}
           />
         );
 

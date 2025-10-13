@@ -19,6 +19,22 @@ export function AuthScreen({ onBack }: AuthScreenProps) {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
+
+    if (!email || !password) {
+      setError('Please enter your email and password');
+      return;
+    }
+
+    if (isSignUp && !fullName) {
+      setError('Please enter your full name');
+      return;
+    }
+
+    if (password.length < 6) {
+      setError('Password must be at least 6 characters');
+      return;
+    }
+
     setLoading(true);
 
     try {
@@ -30,7 +46,22 @@ export function AuthScreen({ onBack }: AuthScreenProps) {
         if (error) throw error;
       }
     } catch (err: any) {
-      setError(err.message || 'An error occurred');
+      const message = err.message || 'An error occurred';
+      if (isSignUp) {
+        if (message.includes('already registered') || message.includes('already exists')) {
+          setError('This email is already registered. Try signing in instead.');
+        } else {
+          setError(`Sign up failed: ${message}`);
+        }
+      } else {
+        if (message.includes('Invalid') || message.includes('credentials')) {
+          setError('Invalid email or password. Please check and try again.');
+        } else if (message.includes('not found')) {
+          setError('No account found with this email. Try signing up instead.');
+        } else {
+          setError(`Sign in failed: ${message}`);
+        }
+      }
     } finally {
       setLoading(false);
     }

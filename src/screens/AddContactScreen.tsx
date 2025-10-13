@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { ArrowLeft, Camera, User, Building2, Mail, Phone, MapPin, Tag, AlertCircle } from 'lucide-react';
 import { useContacts } from '../hooks/useContacts';
+import { FollowUpModal } from '../components/FollowUpModal';
 
 interface AddContactScreenProps {
   onBack: () => void;
@@ -14,6 +15,8 @@ export function AddContactScreen({ onBack, onSave }: AddContactScreenProps) {
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [showFollowUpModal, setShowFollowUpModal] = useState(false);
+  const [savedContactName, setSavedContactName] = useState('');
   const [formData, setFormData] = useState({
     name: '',
     company: '',
@@ -22,6 +25,7 @@ export function AddContactScreen({ onBack, onSave }: AddContactScreenProps) {
     phone: '',
     metAt: '',
     tags: '',
+    conversation: '',
     notes: ''
   });
 
@@ -168,7 +172,8 @@ export function AddContactScreen({ onBack, onSave }: AddContactScreenProps) {
 
       if (addError) throw new Error(addError);
 
-      onSave();
+      setSavedContactName(formData.name);
+      setShowFollowUpModal(true);
     } catch (err: any) {
       setError(err.message || 'Failed to save contact');
     } finally {
@@ -336,17 +341,56 @@ export function AddContactScreen({ onBack, onSave }: AddContactScreenProps) {
 
         <div>
           <label className="block text-sm font-medium text-slate-700 mb-2">
-            Notes
+            Conversation Summary
+          </label>
+          <textarea
+            value={formData.conversation}
+            onChange={(e) => handleChange('conversation', e.target.value)}
+            placeholder="Key topics discussed, common interests, what they're working on..."
+            rows={3}
+            className="w-full px-4 py-3.5 border-2 border-slate-200 rounded-xl focus:border-orange-500 focus:outline-none transition-colors resize-none"
+          />
+          <p className="text-xs text-slate-500 mt-1.5">Quick memory hooks to remember what you talked about</p>
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-slate-700 mb-2">
+            Additional Notes
           </label>
           <textarea
             value={formData.notes}
             onChange={(e) => handleChange('notes', e.target.value)}
-            placeholder="Add any relevant notes about this person..."
-            rows={4}
+            placeholder="Add any other relevant information..."
+            rows={3}
             className="w-full px-4 py-3.5 border-2 border-slate-200 rounded-xl focus:border-orange-500 focus:outline-none transition-colors resize-none"
           />
         </div>
       </form>
+
+      <div className="px-6 py-4 bg-white border-t border-slate-200">
+        <button
+          type="submit"
+          form="contact-form"
+          disabled={loading}
+          className="w-full bg-gradient-to-r from-orange-500 to-amber-500 text-white font-bold py-4 rounded-2xl shadow-lg active:scale-95 transition-transform disabled:opacity-50"
+        >
+          {loading ? 'Saving Contact...' : 'Save Contact'}
+        </button>
+      </div>
+
+      {showFollowUpModal && (
+        <FollowUpModal
+          contactName={savedContactName}
+          onClose={() => {
+            setShowFollowUpModal(false);
+            onSave();
+          }}
+          onSetReminder={(days) => {
+            setShowFollowUpModal(false);
+            onSave();
+          }}
+        />
+      )}
     </div>
   );
 }
