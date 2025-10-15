@@ -9,6 +9,7 @@ export interface Memory {
   tags: string[];
   source_type: 'voice' | 'text' | 'ocr';
   linked_contact_id: string | null;
+  memory_date: string;
   created_at: string;
   updated_at: string;
 }
@@ -79,6 +80,7 @@ export function useMemories() {
     tags?: string[];
     source_type: 'voice' | 'text' | 'ocr';
     linked_contact_id?: string;
+    memory_date?: string;
   }) => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
@@ -93,6 +95,7 @@ export function useMemories() {
           tags: memoryData.tags || [],
           source_type: memoryData.source_type,
           linked_contact_id: memoryData.linked_contact_id || null,
+          memory_date: memoryData.memory_date || new Date().toISOString(),
         })
         .select()
         .single();

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ArrowLeft, Save, Tag, User, Home, AlertCircle } from 'lucide-react';
+import { ArrowLeft, Save, Tag, User, Home, AlertCircle, Calendar } from 'lucide-react';
 import { Memory, useMemories } from '../hooks/useMemories';
 import { Contact } from '../hooks/useContacts';
 
@@ -20,6 +20,7 @@ export function EditMemoryScreen({ memory, contacts, onBack, onSave, onHome }: E
     summary: memory.summary || '',
     tags: memory.tags?.join(', ') || '',
     linkedContactId: memory.linked_contact_id || null as string | null,
+    memoryDate: memory.memory_date ? new Date(memory.memory_date).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
   });
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -38,6 +39,7 @@ export function EditMemoryScreen({ memory, contacts, onBack, onSave, onHome }: E
         summary: formData.summary || undefined,
         tags: tagsArray.length > 0 ? tagsArray : undefined,
         linked_contact_id: formData.linkedContactId || undefined,
+        memory_date: new Date(formData.memoryDate).toISOString(),
       });
 
       if (updateError) throw new Error(updateError);
@@ -79,6 +81,22 @@ export function EditMemoryScreen({ memory, contacts, onBack, onSave, onHome }: E
             <span className="text-sm text-red-700">{error}</span>
           </div>
         )}
+
+        <div>
+          <label className="block text-sm font-medium text-slate-700 mb-2">
+            <Calendar size={16} className="inline mr-1.5" />
+            Memory Date
+          </label>
+          <input
+            type="date"
+            value={formData.memoryDate}
+            onChange={(e) => setFormData(prev => ({ ...prev, memoryDate: e.target.value }))}
+            max={new Date().toISOString().split('T')[0]}
+            disabled={loading}
+            className="w-full px-4 py-3.5 border-2 border-slate-200 rounded-xl focus:border-orange-500 focus:outline-none transition-colors disabled:bg-slate-50"
+          />
+          <p className="text-xs text-slate-500 mt-1.5">When did this memory occur?</p>
+        </div>
 
         <div>
           <label className="block text-sm font-medium text-slate-700 mb-2">

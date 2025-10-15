@@ -1,5 +1,5 @@
 import { useState, useRef } from 'react';
-import { ArrowLeft, Mic, FileText, Camera, Loader, Brain, Tag, User, Upload, X, Home } from 'lucide-react';
+import { ArrowLeft, Mic, FileText, Camera, Loader, Brain, Tag, User, Upload, X, Home, Calendar } from 'lucide-react';
 import { useMemories } from '../hooks/useMemories';
 import { Contact, useContacts } from '../hooks/useContacts';
 import { ContactSuggestion } from '../components/ContactSuggestion';
@@ -36,6 +36,7 @@ export function AddMemoryScreen({ onBack, onSave, onHome, contacts = [] }: AddMe
   const [detectedContact, setDetectedContact] = useState<DetectedContact | null>(null);
   const [showContactSuggestion, setShowContactSuggestion] = useState(false);
   const [showReminderChips, setShowReminderChips] = useState(false);
+  const [memoryDate, setMemoryDate] = useState(new Date().toISOString().split('T')[0]);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleVoiceCapture = async () => {
@@ -146,6 +147,7 @@ export function AddMemoryScreen({ onBack, onSave, onHome, contacts = [] }: AddMe
         tags: Array.isArray(tags) ? tags : [],
         source_type: mode === 'voice' ? 'voice' : mode === 'ocr' ? 'ocr' : 'text',
         linked_contact_id: selectedContact || undefined,
+        memory_date: new Date(memoryDate).toISOString(),
       });
 
       if (addError) throw new Error(addError);
@@ -272,6 +274,22 @@ export function AddMemoryScreen({ onBack, onSave, onHome, contacts = [] }: AddMe
 
         {(mode === 'text' || (mode === 'voice' && text && !loading)) && (
           <>
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-2">
+                <Calendar size={16} className="inline mr-1.5" />
+                Memory Date
+              </label>
+              <input
+                type="date"
+                value={memoryDate}
+                onChange={(e) => setMemoryDate(e.target.value)}
+                max={new Date().toISOString().split('T')[0]}
+                disabled={loading}
+                className="w-full px-4 py-3.5 border-2 border-slate-200 rounded-xl focus:border-orange-500 focus:outline-none transition-colors disabled:bg-slate-50"
+              />
+              <p className="text-xs text-slate-500 mt-1.5">When did this memory occur?</p>
+            </div>
+
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-2">
                 Memory Content *
