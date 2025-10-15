@@ -227,7 +227,30 @@ export function AddContactScreen({ onBack, onSave }: AddContactScreenProps) {
     <div className="h-full bg-white flex flex-col">
       <div className="px-6 py-4 flex items-center justify-between border-b border-slate-200">
         <div className="flex items-center">
-          <button onClick={onBack} className="p-2 -ml-2 active:bg-slate-100 rounded-full transition-colors" aria-label="Go back">
+          <button
+            onClick={() => {
+              if (captureMethod) {
+                setCaptureMethod(null);
+                setFormData({
+                  name: '',
+                  company: '',
+                  title: '',
+                  email: '',
+                  phone: '',
+                  metAt: '',
+                  tags: '',
+                  conversation: '',
+                  notes: ''
+                });
+                setPhotoFile(null);
+                setPhotoPreview(null);
+              } else {
+                onBack();
+              }
+            }}
+            className="p-2 -ml-2 active:bg-slate-100 rounded-full transition-colors"
+            aria-label="Go back"
+          >
             <ArrowLeft size={24} className="text-slate-700" />
           </button>
           <h1 className="text-xl font-bold text-slate-900 ml-4">Contact Details</h1>
