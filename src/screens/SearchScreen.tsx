@@ -6,12 +6,14 @@ import { BottomNav } from '../components/BottomNav';
 
 interface SearchScreenProps {
   onNavigate: (screen: string) => void;
+  onSelectMemory: (memoryId: string) => void;
+  onSelectContact: (contactId: string) => void;
   contacts: Contact[];
 }
 
 type SearchFilter = 'all' | 'memories' | 'people';
 
-export function SearchScreen({ onNavigate, contacts }: SearchScreenProps) {
+export function SearchScreen({ onNavigate, onSelectMemory, onSelectContact, contacts }: SearchScreenProps) {
   const { searchMemories, memories } = useMemories();
   const [query, setQuery] = useState('');
   const [activeFilter, setActiveFilter] = useState<SearchFilter>('all');
@@ -147,9 +149,10 @@ export function SearchScreen({ onNavigate, contacts }: SearchScreenProps) {
                 </h2>
                 <div className="space-y-3">
                   {searchResults.map((memory) => (
-                    <div
+                    <button
                       key={memory.id}
-                      className="bg-white rounded-2xl p-4 shadow-sm border border-slate-100"
+                      onClick={() => onSelectMemory(memory.id)}
+                      className="w-full bg-white rounded-2xl p-4 shadow-sm border border-slate-100 active:bg-slate-50 transition-colors text-left"
                     >
                       <div className="flex items-start gap-3 mb-2">
                         <div className="w-10 h-10 bg-gradient-to-br from-orange-500 to-amber-400 rounded-full flex items-center justify-center text-white flex-shrink-0">
@@ -180,7 +183,7 @@ export function SearchScreen({ onNavigate, contacts }: SearchScreenProps) {
                           ))}
                         </div>
                       )}
-                    </div>
+                    </button>
                   ))}
                 </div>
               </div>
@@ -195,7 +198,8 @@ export function SearchScreen({ onNavigate, contacts }: SearchScreenProps) {
                   {filteredContacts.map((contact) => (
                     <button
                       key={contact.id}
-                      className="w-full bg-white rounded-2xl p-4 shadow-sm border border-slate-100 flex items-center gap-4 active:scale-98 transition-transform"
+                      onClick={() => onSelectContact(contact.id)}
+                      className="w-full bg-white rounded-2xl p-4 shadow-sm border border-slate-100 flex items-center gap-4 active:bg-slate-50 transition-colors"
                     >
                       <div className="w-12 h-12 bg-gradient-to-br from-cyan-500 to-blue-600 rounded-full flex items-center justify-center text-white font-semibold text-lg flex-shrink-0">
                         {contact.name.split(' ').map(n => n[0]).join('').toUpperCase()}

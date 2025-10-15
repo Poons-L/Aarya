@@ -13,6 +13,7 @@ import { SearchScreen } from './screens/SearchScreen';
 import { RemindersScreen } from './screens/RemindersScreen';
 import { AddReminderScreen } from './screens/AddReminderScreen';
 import { SettingsScreen } from './screens/SettingsScreen';
+import { MemoryDetailScreen } from './screens/MemoryDetailScreen';
 import { useAuth } from './contexts/AuthContext';
 import { useContacts } from './hooks/useContacts';
 import { useReminders } from './hooks/useReminders';
@@ -28,6 +29,7 @@ type Screen =
   | 'contact-detail'
   | 'record-conversation'
   | 'add-memory'
+  | 'memory-detail'
   | 'search'
   | 'reminders'
   | 'add-reminder'
@@ -40,6 +42,7 @@ function App() {
   const { memories } = useMemories();
   const [currentScreen, setCurrentScreen] = useState<Screen>('welcome');
   const [selectedContactId, setSelectedContactId] = useState<string | null>(null);
+  const [selectedMemoryId, setSelectedMemoryId] = useState<string | null>(null);
 
   useEffect(() => {
     if (!authLoading) {
@@ -62,6 +65,7 @@ function App() {
   }
 
   const selectedContact = contacts.find(c => c.id === selectedContactId);
+  const selectedMemory = memories.find(m => m.id === selectedMemoryId);
 
   const mockContacts = [
     {
@@ -147,6 +151,14 @@ function App() {
         return (
           <HomeScreen
             onNavigate={navigate}
+            onSelectMemory={(memoryId) => {
+              setSelectedMemoryId(memoryId);
+              navigate('memory-detail');
+            }}
+            onSelectContact={(contactId) => {
+              setSelectedContactId(contactId);
+              navigate('contact-detail');
+            }}
             contacts={contacts}
             reminders={reminders}
             memories={memories}
@@ -211,10 +223,33 @@ function App() {
           />
         );
 
+      case 'memory-detail':
+        if (!selectedMemory) {
+          navigate('home');
+          return null;
+        }
+        return (
+          <MemoryDetailScreen
+            memory={selectedMemory}
+            contacts={contacts}
+            onBack={() => navigate('home')}
+            onHome={() => navigate('home')}
+            onDelete={() => navigate('home')}
+          />
+        );
+
       case 'search':
         return (
           <SearchScreen
             onNavigate={navigate}
+            onSelectMemory={(memoryId) => {
+              setSelectedMemoryId(memoryId);
+              navigate('memory-detail');
+            }}
+            onSelectContact={(contactId) => {
+              setSelectedContactId(contactId);
+              navigate('contact-detail');
+            }}
             contacts={contacts}
           />
         );

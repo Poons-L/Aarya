@@ -5,12 +5,14 @@ import { Memory } from '../hooks/useMemories';
 
 interface HomeScreenProps {
   onNavigate: (screen: string) => void;
+  onSelectMemory: (memoryId: string) => void;
+  onSelectContact: (contactId: string) => void;
   contacts: Contact[];
   reminders: Reminder[];
   memories: Memory[];
 }
 
-export function HomeScreen({ onNavigate, contacts, reminders, memories }: HomeScreenProps) {
+export function HomeScreen({ onNavigate, onSelectMemory, onSelectContact, contacts, reminders, memories }: HomeScreenProps) {
   const upcomingReminders = reminders.filter(r => !r.completed).length;
   const recentMemories = memories.slice(0, 10);
 
@@ -89,21 +91,30 @@ export function HomeScreen({ onNavigate, contacts, reminders, memories }: HomeSc
 
       <div className="flex-1 overflow-y-auto px-6 py-6 space-y-6">
         <div className="grid grid-cols-3 gap-3">
-          <div className="bg-white rounded-2xl p-4 shadow-sm border border-slate-100">
+          <button
+            onClick={() => onNavigate('search')}
+            className="bg-white rounded-2xl p-4 shadow-sm border border-slate-100 active:bg-slate-50 transition-colors text-left"
+          >
             <Brain size={24} className="text-orange-500 mb-2" />
             <div className="text-2xl font-bold text-slate-900">{memories.length}</div>
             <div className="text-xs text-slate-600">Memories</div>
-          </div>
-          <div className="bg-white rounded-2xl p-4 shadow-sm border border-slate-100">
+          </button>
+          <button
+            onClick={() => onNavigate('contacts')}
+            className="bg-white rounded-2xl p-4 shadow-sm border border-slate-100 active:bg-slate-50 transition-colors text-left"
+          >
             <Search size={24} className="text-orange-500 mb-2" />
             <div className="text-2xl font-bold text-slate-900">{contacts.length}</div>
             <div className="text-xs text-slate-600">People</div>
-          </div>
-          <div className="bg-white rounded-2xl p-4 shadow-sm border border-slate-100">
+          </button>
+          <button
+            onClick={() => onNavigate('reminders')}
+            className="bg-white rounded-2xl p-4 shadow-sm border border-slate-100 active:bg-slate-50 transition-colors text-left"
+          >
             <Bell size={24} className="text-orange-500 mb-2" />
             <div className="text-2xl font-bold text-slate-900">{upcomingReminders}</div>
             <div className="text-xs text-slate-600">Follow-ups</div>
-          </div>
+          </button>
         </div>
 
         <div>
@@ -122,9 +133,10 @@ export function HomeScreen({ onNavigate, contacts, reminders, memories }: HomeSc
           {recentMemories.length > 0 ? (
             <div className="space-y-3">
               {recentMemories.map((memory) => (
-                <div
+                <button
                   key={memory.id}
-                  className="bg-white rounded-2xl p-4 shadow-sm border border-slate-100"
+                  onClick={() => onSelectMemory(memory.id)}
+                  className="w-full bg-white rounded-2xl p-4 shadow-sm border border-slate-100 active:bg-slate-50 transition-colors text-left"
                 >
                   <div className="flex items-start gap-3 mb-2">
                     <div className="w-10 h-10 bg-gradient-to-br from-orange-500 to-amber-400 rounded-full flex items-center justify-center text-white flex-shrink-0">
@@ -154,7 +166,7 @@ export function HomeScreen({ onNavigate, contacts, reminders, memories }: HomeSc
                       ))}
                     </div>
                   )}
-                </div>
+                </button>
               ))}
             </div>
           ) : (
