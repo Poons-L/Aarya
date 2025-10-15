@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ArrowLeft, Mail, Phone, MapPin, MessageSquare, Calendar, MoreVertical, Edit, Trash2, Bell } from 'lucide-react';
+import { ArrowLeft, Mail, Phone, MapPin, MessageSquare, Calendar, MoreVertical, Edit, Trash2, Bell, Home } from 'lucide-react';
 import { Contact, useContacts } from '../hooks/useContacts';
 import { useConversations } from '../hooks/useConversations';
 
@@ -8,9 +8,10 @@ interface ContactDetailScreenProps {
   onBack: () => void;
   onEdit: () => void;
   onAddReminder: () => void;
+  onHome: () => void;
 }
 
-export function ContactDetailScreen({ contact, onBack, onEdit, onAddReminder }: ContactDetailScreenProps) {
+export function ContactDetailScreen({ contact, onBack, onEdit, onAddReminder, onHome }: ContactDetailScreenProps) {
   const { deleteContact } = useContacts();
   const { conversations } = useConversations(contact.id);
   const [showMenu, setShowMenu] = useState(false);
@@ -27,8 +28,12 @@ export function ContactDetailScreen({ contact, onBack, onEdit, onAddReminder }: 
     <div className="h-full bg-slate-50 flex flex-col">
       <div className="relative bg-gradient-to-br from-orange-500 to-amber-600 px-6 pt-14 pb-24">
         <div className="flex items-center justify-between mb-6">
-          <button onClick={onBack} className="p-2 -ml-2 bg-white/20 backdrop-blur-sm rounded-full active:scale-95 transition-transform">
-            <ArrowLeft size={24} className="text-white" />
+          <button
+            onClick={onBack}
+            className="flex items-center gap-2 px-4 py-2 bg-white/20 backdrop-blur-sm rounded-full active:scale-95 transition-transform"
+          >
+            <ArrowLeft size={20} className="text-white" />
+            <span className="font-medium text-white">Back</span>
           </button>
           <button
             onClick={() => setShowMenu(!showMenu)}
@@ -225,13 +230,21 @@ export function ContactDetailScreen({ contact, onBack, onEdit, onAddReminder }: 
         </div>
       </div>
 
-      <div className="px-6 py-4 bg-white border-t border-slate-200">
+      <div className="px-6 py-4 bg-white border-t border-slate-200 space-y-3">
         <button
           onClick={onAddReminder}
           className="w-full bg-gradient-to-br from-orange-500 to-amber-600 text-white font-semibold py-4 rounded-xl shadow-lg active:scale-95 transition-transform flex items-center justify-center gap-2"
         >
           <Bell size={20} />
           Set Follow-Up Reminder
+        </button>
+        <button
+          type="button"
+          onClick={onHome}
+          className="w-full flex items-center justify-center gap-2 py-4 bg-slate-100 hover:bg-slate-200 active:bg-slate-300 rounded-xl font-semibold text-slate-700 transition-colors"
+        >
+          <Home size={20} />
+          <span>Go to Home</span>
         </button>
       </div>
     </div>

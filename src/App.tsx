@@ -186,6 +186,7 @@ function App() {
             onBack={() => navigate('contacts')}
             onEdit={() => navigate('add-contact')}
             onAddReminder={() => navigate('add-reminder')}
+            onHome={() => navigate('home')}
           />
         );
 
@@ -194,6 +195,7 @@ function App() {
           <RecordConversationScreen
             onBack={() => navigate('home')}
             onSave={() => navigate('home')}
+            onHome={() => navigate('home')}
             onCreateContact={() => navigate('add-contact')}
             contacts={contacts}
           />
@@ -204,6 +206,7 @@ function App() {
           <AddMemoryScreen
             onBack={() => navigate('home')}
             onSave={() => navigate('home')}
+            onHome={() => navigate('home')}
             contacts={contacts}
           />
         );
@@ -230,6 +233,7 @@ function App() {
           <AddReminderScreen
             onBack={() => navigate('reminders')}
             onSave={() => navigate('reminders')}
+            onHome={() => navigate('home')}
           />
         );
 

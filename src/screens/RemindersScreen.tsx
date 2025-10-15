@@ -47,12 +47,14 @@ export function RemindersScreen({ onBack, onAddReminder, onNavigate }: Reminders
     <div className="h-full bg-slate-50 flex flex-col">
       <div className="bg-white px-6 pt-14 pb-6 border-b border-slate-200">
         <div className="flex items-center justify-between mb-6">
-          <div className="flex items-center">
-            <button onClick={onBack} className="p-2 -ml-2 active:bg-slate-100 rounded-full transition-colors">
-              <ArrowLeft size={24} className="text-slate-700" />
-            </button>
-            <h1 className="text-xl font-bold text-slate-900 ml-4">Reminders</h1>
-          </div>
+          <button
+            onClick={onBack}
+            className="flex items-center gap-2 px-4 py-2 bg-slate-100 hover:bg-slate-200 active:bg-slate-300 rounded-full transition-colors"
+          >
+            <ArrowLeft size={20} className="text-slate-700" />
+            <span className="font-medium text-slate-700">Back</span>
+          </button>
+          <h1 className="text-xl font-bold text-slate-900 ml-4">Reminders</h1>
           <button
             onClick={onAddReminder}
             className="px-4 py-2 bg-orange-500 text-white font-semibold rounded-xl active:scale-95 transition-transform"

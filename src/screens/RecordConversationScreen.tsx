@@ -1,15 +1,16 @@
 import { useState, useEffect } from 'react';
-import { ArrowLeft, Mic, Square, Play, Pause, User, X, Check, Tag, UserPlus } from 'lucide-react';
+import { ArrowLeft, Mic, Square, Play, Pause, User, X, Check, Tag, UserPlus, Home } from 'lucide-react';
 import { Contact } from '../hooks/useContacts';
 
 interface RecordConversationScreenProps {
   onBack: () => void;
   onSave: () => void;
+  onHome: () => void;
   onCreateContact?: () => void;
   contacts?: Contact[];
 }
 
-export function RecordConversationScreen({ onBack, onSave, onCreateContact, contacts = [] }: RecordConversationScreenProps) {
+export function RecordConversationScreen({ onBack, onSave, onHome, onCreateContact, contacts = [] }: RecordConversationScreenProps) {
   const [isRecording, setIsRecording] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
   const [recordingTime, setRecordingTime] = useState(0);
@@ -78,12 +79,16 @@ export function RecordConversationScreen({ onBack, onSave, onCreateContact, cont
     return (
       <div className="h-full bg-white flex flex-col">
         <div className="px-6 py-4 flex items-center justify-between border-b border-slate-200">
-          <div className="flex items-center">
-            <button onClick={handleDiscard} className="p-2 -ml-2 active:bg-slate-100 rounded-full transition-colors">
-              <ArrowLeft size={24} className="text-slate-700" />
-            </button>
-            <h1 className="text-xl font-bold text-slate-900 ml-4">Recording Summary</h1>
-          </div>
+          <button
+            onClick={handleDiscard}
+            className="flex items-center gap-2 px-4 py-2 bg-slate-100 hover:bg-slate-200 active:bg-slate-300 rounded-full transition-colors"
+            aria-label="Go back"
+          >
+            <ArrowLeft size={20} className="text-slate-700" />
+            <span className="font-medium text-slate-700">Cancel</span>
+          </button>
+          <h1 className="text-xl font-bold text-slate-900">Recording Summary</h1>
+          <div className="w-24"></div>
         </div>
 
         <div className="flex-1 overflow-y-auto px-6 py-6 space-y-5">
@@ -180,20 +185,30 @@ export function RecordConversationScreen({ onBack, onSave, onCreateContact, cont
           </div>
         </div>
 
-        <div className="px-6 py-4 bg-white border-t border-slate-200 flex gap-3">
+        <div className="px-6 py-4 bg-white border-t border-slate-200 space-y-3">
+          <div className="flex gap-3">
+            <button
+              onClick={handleDiscard}
+              className="flex-1 bg-slate-100 text-slate-700 font-semibold py-4 rounded-2xl active:scale-95 transition-transform flex items-center justify-center gap-2"
+            >
+              <X size={20} />
+              Discard
+            </button>
+            <button
+              onClick={handleSaveRecording}
+              className="flex-1 bg-gradient-to-r from-orange-500 to-amber-500 text-white font-bold py-4 rounded-2xl shadow-lg active:scale-95 transition-transform flex items-center justify-center gap-2"
+            >
+              <Check size={20} />
+              Save
+            </button>
+          </div>
           <button
-            onClick={handleDiscard}
-            className="flex-1 bg-slate-100 text-slate-700 font-semibold py-4 rounded-2xl active:scale-95 transition-transform flex items-center justify-center gap-2"
+            type="button"
+            onClick={onHome}
+            className="w-full flex items-center justify-center gap-2 py-4 bg-slate-100 hover:bg-slate-200 active:bg-slate-300 rounded-xl font-semibold text-slate-700 transition-colors"
           >
-            <X size={20} />
-            Discard
-          </button>
-          <button
-            onClick={handleSaveRecording}
-            className="flex-1 bg-gradient-to-r from-orange-500 to-amber-500 text-white font-bold py-4 rounded-2xl shadow-lg active:scale-95 transition-transform flex items-center justify-center gap-2"
-          >
-            <Check size={20} />
-            Save
+            <Home size={20} />
+            <span>Go to Home</span>
           </button>
         </div>
       </div>
@@ -203,11 +218,15 @@ export function RecordConversationScreen({ onBack, onSave, onCreateContact, cont
   return (
     <div className="h-full bg-gradient-to-b from-slate-900 to-slate-800 flex flex-col text-white">
       <div className="px-6 py-4 flex items-center justify-between">
-        <button onClick={onBack} className="p-2 -ml-2 active:bg-white/10 rounded-full transition-colors">
-          <ArrowLeft size={24} className="text-white" />
+        <button
+          onClick={onBack}
+          className="flex items-center gap-2 px-4 py-2 bg-white/20 hover:bg-white/30 active:bg-white/40 rounded-full transition-colors"
+        >
+          <ArrowLeft size={20} className="text-white" />
+          <span className="font-medium text-white">Back</span>
         </button>
         <h1 className="text-lg font-semibold">Record Conversation</h1>
-        <div className="w-16"></div>
+        <div className="w-24"></div>
       </div>
 
       <div className="flex-1 flex flex-col items-center justify-center px-6">

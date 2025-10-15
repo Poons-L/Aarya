@@ -1,5 +1,5 @@
 import { useState, useRef } from 'react';
-import { ArrowLeft, Mic, FileText, Camera, Loader, Brain, Tag, User, Upload, X } from 'lucide-react';
+import { ArrowLeft, Mic, FileText, Camera, Loader, Brain, Tag, User, Upload, X, Home } from 'lucide-react';
 import { useMemories } from '../hooks/useMemories';
 import { Contact, useContacts } from '../hooks/useContacts';
 import { ContactSuggestion } from '../components/ContactSuggestion';
@@ -9,6 +9,7 @@ import { QuickReminderChips } from '../components/QuickReminderChips';
 interface AddMemoryScreenProps {
   onBack: () => void;
   onSave: () => void;
+  onHome: () => void;
   contacts?: Contact[];
 }
 
@@ -22,7 +23,7 @@ interface DetectedContact {
 
 type CaptureMode = 'select' | 'voice' | 'text' | 'ocr';
 
-export function AddMemoryScreen({ onBack, onSave, contacts = [] }: AddMemoryScreenProps) {
+export function AddMemoryScreen({ onBack, onSave, onHome, contacts = [] }: AddMemoryScreenProps) {
   const { addMemory, transcribeAudio, summarizeText } = useMemories();
   const { addContact } = useContacts();
   const [mode, setMode] = useState<CaptureMode>('select');
@@ -160,14 +161,20 @@ export function AddMemoryScreen({ onBack, onSave, contacts = [] }: AddMemoryScre
   if (mode === 'select') {
     return (
       <div className="h-full bg-white flex flex-col">
-        <div className="px-6 py-4 flex items-center border-b border-slate-200">
-          <button onClick={onBack} className="p-2 -ml-2 active:bg-slate-100 rounded-full transition-colors" aria-label="Go back">
-            <ArrowLeft size={24} className="text-slate-700" />
+        <div className="px-6 py-4 flex items-center justify-between border-b border-slate-200">
+          <button
+            onClick={onBack}
+            className="flex items-center gap-2 px-4 py-2 bg-slate-100 hover:bg-slate-200 active:bg-slate-300 rounded-full transition-colors"
+            aria-label="Go back"
+          >
+            <ArrowLeft size={20} className="text-slate-700" />
+            <span className="font-medium text-slate-700">Back</span>
           </button>
-          <h1 className="text-xl font-bold text-slate-900 ml-4">Capture Memory</h1>
+          <h1 className="text-xl font-bold text-slate-900">Capture Memory</h1>
+          <div className="w-20"></div>
         </div>
 
-        <div className="flex-1 px-6 py-12">
+        <div className="flex-1 px-6 py-12 overflow-y-auto">
           <h2 className="text-2xl font-bold text-slate-900 mb-2">How would you like to capture this?</h2>
           <p className="text-slate-600 mb-8">Choose your preferred input method</p>
 
@@ -203,6 +210,16 @@ export function AddMemoryScreen({ onBack, onSave, contacts = [] }: AddMemoryScre
             </button>
           </div>
         </div>
+
+        <div className="px-6 py-4 bg-white border-t border-slate-200">
+          <button
+            onClick={onHome}
+            className="w-full flex items-center justify-center gap-2 py-4 bg-slate-100 hover:bg-slate-200 active:bg-slate-300 rounded-xl font-semibold text-slate-700 transition-colors"
+          >
+            <Home size={20} />
+            <span>Go to Home</span>
+          </button>
+        </div>
       </div>
     );
   }
@@ -210,14 +227,18 @@ export function AddMemoryScreen({ onBack, onSave, contacts = [] }: AddMemoryScre
   return (
     <div className="h-full bg-white flex flex-col">
       <div className="px-6 py-4 flex items-center justify-between border-b border-slate-200">
-        <div className="flex items-center">
-          <button onClick={() => mode === 'text' || mode === 'ocr' ? setMode('select') : onBack()} className="p-2 -ml-2 active:bg-slate-100 rounded-full transition-colors" aria-label="Go back">
-            <ArrowLeft size={24} className="text-slate-700" />
-          </button>
-          <h1 className="text-xl font-bold text-slate-900 ml-4">
-            {mode === 'voice' ? 'Voice Memory' : mode === 'ocr' ? 'Photo Capture' : 'Text Memory'}
-          </h1>
-        </div>
+        <button
+          onClick={() => setMode('select')}
+          className="flex items-center gap-2 px-4 py-2 bg-slate-100 hover:bg-slate-200 active:bg-slate-300 rounded-full transition-colors"
+          aria-label="Go back"
+        >
+          <ArrowLeft size={20} className="text-slate-700" />
+          <span className="font-medium text-slate-700">Back</span>
+        </button>
+        <h1 className="text-xl font-bold text-slate-900">
+          {mode === 'voice' ? 'Voice Memory' : mode === 'ocr' ? 'Photo Capture' : 'Text Memory'}
+        </h1>
+        <div className="w-20"></div>
       </div>
 
       <form onSubmit={(e) => { e.preventDefault(); handleTextSubmit(); }} className="flex-1 overflow-y-auto px-6 py-6 space-y-5">
@@ -404,7 +425,7 @@ export function AddMemoryScreen({ onBack, onSave, contacts = [] }: AddMemoryScre
       </form>
 
       {text && !loading && (
-        <div className="px-6 py-4 bg-white border-t border-slate-200">
+        <div className="px-6 py-4 bg-white border-t border-slate-200 space-y-3">
           {showReminderChips ? (
             <button
               type="button"
@@ -436,6 +457,14 @@ export function AddMemoryScreen({ onBack, onSave, contacts = [] }: AddMemoryScre
               )}
             </button>
           )}
+          <button
+            type="button"
+            onClick={onHome}
+            className="w-full flex items-center justify-center gap-2 py-4 bg-slate-100 hover:bg-slate-200 active:bg-slate-300 rounded-xl font-semibold text-slate-700 transition-colors"
+          >
+            <Home size={20} />
+            <span>Go to Home</span>
+          </button>
         </div>
       )}
     </div>

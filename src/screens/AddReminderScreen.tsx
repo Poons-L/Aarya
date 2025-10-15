@@ -1,13 +1,14 @@
 import { useState } from 'react';
-import { ArrowLeft, Calendar, Clock, AlignLeft, Flag, AlertCircle } from 'lucide-react';
+import { ArrowLeft, Calendar, Clock, AlignLeft, Flag, AlertCircle, Home } from 'lucide-react';
 import { useReminders } from '../hooks/useReminders';
 
 interface AddReminderScreenProps {
   onBack: () => void;
   onSave: () => void;
+  onHome: () => void;
 }
 
-export function AddReminderScreen({ onBack, onSave }: AddReminderScreenProps) {
+export function AddReminderScreen({ onBack, onSave, onHome }: AddReminderScreenProps) {
   const { addReminder } = useReminders();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -50,17 +51,20 @@ export function AddReminderScreen({ onBack, onSave }: AddReminderScreenProps) {
   return (
     <div className="h-full bg-white flex flex-col">
       <div className="px-6 py-4 flex items-center justify-between border-b border-slate-200">
-        <div className="flex items-center">
-          <button onClick={onBack} className="p-2 -ml-2 active:bg-slate-100 rounded-full transition-colors">
-            <ArrowLeft size={24} className="text-slate-700" />
-          </button>
-          <h1 className="text-xl font-bold text-slate-900 ml-4">New Reminder</h1>
-        </div>
+        <button
+          onClick={onBack}
+          className="flex items-center gap-2 px-4 py-2 bg-slate-100 hover:bg-slate-200 active:bg-slate-300 rounded-full transition-colors"
+          aria-label="Go back"
+        >
+          <ArrowLeft size={20} className="text-slate-700" />
+          <span className="font-medium text-slate-700">Back</span>
+        </button>
+        <h1 className="text-xl font-bold text-slate-900">New Reminder</h1>
         <button
           type="submit"
           form="reminder-form"
           disabled={loading}
-          className="text-orange-600 font-bold px-5 py-2.5 active:bg-orange-50 rounded-lg transition-colors disabled:opacity-50 text-lg"
+          className="text-orange-600 font-bold px-5 py-2.5 active:bg-orange-50 rounded-lg transition-colors disabled:opacity-50"
         >
           {loading ? 'Saving...' : 'Save'}
         </button>
@@ -230,7 +234,7 @@ export function AddReminderScreen({ onBack, onSave }: AddReminderScreenProps) {
         </div>
       </form>
 
-      <div className="px-6 py-4 bg-white border-t border-slate-200">
+      <div className="px-6 py-4 bg-white border-t border-slate-200 space-y-3">
         <button
           type="submit"
           form="reminder-form"
@@ -238,6 +242,14 @@ export function AddReminderScreen({ onBack, onSave }: AddReminderScreenProps) {
           className="w-full bg-gradient-to-r from-orange-500 to-amber-500 text-white font-bold py-4 rounded-2xl shadow-lg active:scale-95 transition-transform disabled:opacity-50"
         >
           {loading ? 'Setting Reminder...' : 'Set Reminder'}
+        </button>
+        <button
+          type="button"
+          onClick={onHome}
+          className="w-full flex items-center justify-center gap-2 py-4 bg-slate-100 hover:bg-slate-200 active:bg-slate-300 rounded-xl font-semibold text-slate-700 transition-colors"
+        >
+          <Home size={20} />
+          <span>Go to Home</span>
         </button>
       </div>
     </div>
