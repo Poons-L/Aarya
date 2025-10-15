@@ -8,12 +8,15 @@ import { AddContactScreen } from './screens/AddContactScreen';
 import { ContactsScreen } from './screens/ContactsScreen';
 import { ContactDetailScreen } from './screens/ContactDetailScreen';
 import { RecordConversationScreen } from './screens/RecordConversationScreen';
+import { AddMemoryScreen } from './screens/AddMemoryScreen';
+import { SearchScreen } from './screens/SearchScreen';
 import { RemindersScreen } from './screens/RemindersScreen';
 import { AddReminderScreen } from './screens/AddReminderScreen';
 import { SettingsScreen } from './screens/SettingsScreen';
 import { useAuth } from './contexts/AuthContext';
 import { useContacts } from './hooks/useContacts';
 import { useReminders } from './hooks/useReminders';
+import { useMemories } from './hooks/useMemories';
 
 type Screen =
   | 'welcome'
@@ -24,6 +27,8 @@ type Screen =
   | 'contacts'
   | 'contact-detail'
   | 'record-conversation'
+  | 'add-memory'
+  | 'search'
   | 'reminders'
   | 'add-reminder'
   | 'settings';
@@ -32,6 +37,7 @@ function App() {
   const { user, loading: authLoading } = useAuth();
   const { contacts } = useContacts();
   const { reminders } = useReminders();
+  const { memories } = useMemories();
   const [currentScreen, setCurrentScreen] = useState<Screen>('welcome');
   const [selectedContactId, setSelectedContactId] = useState<string | null>(null);
 
@@ -143,6 +149,7 @@ function App() {
             onNavigate={navigate}
             contacts={contacts}
             reminders={reminders}
+            memories={memories}
           />
         );
 
@@ -187,6 +194,23 @@ function App() {
             onBack={() => navigate('home')}
             onSave={() => navigate('home')}
             onCreateContact={() => navigate('add-contact')}
+            contacts={contacts}
+          />
+        );
+
+      case 'add-memory':
+        return (
+          <AddMemoryScreen
+            onBack={() => navigate('home')}
+            onSave={() => navigate('home')}
+            contacts={contacts}
+          />
+        );
+
+      case 'search':
+        return (
+          <SearchScreen
+            onNavigate={navigate}
             contacts={contacts}
           />
         );
