@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ArrowLeft, Camera, User, Building2, Mail, Phone, MapPin, Tag, AlertCircle } from 'lucide-react';
+import { ArrowLeft, Camera, User, Building2, Mail, Phone, MapPin, Tag, AlertCircle, Smartphone } from 'lucide-react';
 import { useContacts } from '../hooks/useContacts';
 import { FollowUpModal } from '../components/FollowUpModal';
 
@@ -38,6 +38,39 @@ export function AddContactScreen({ onBack, onSave }: AddContactScreenProps) {
     }
   };
 
+  const handlePickFromPhone = async () => {
+    try {
+      if ('contacts' in navigator && 'ContactsManager' in window) {
+        const props = ['name', 'email', 'tel'];
+        const opts = { multiple: false };
+        const contacts = await (navigator as any).contacts.select(props, opts);
+
+        if (contacts && contacts.length > 0) {
+          const contact = contacts[0];
+          setFormData({
+            name: contact.name?.[0] || '',
+            email: contact.email?.[0] || '',
+            phone: contact.tel?.[0] || '',
+            company: '',
+            title: '',
+            metAt: '',
+            tags: '',
+            conversation: '',
+            notes: ''
+          });
+          setCaptureMethod('manual');
+        }
+      } else {
+        alert('Contact picker is not supported on this device. This feature works on Android devices with Chrome or Edge browsers.');
+      }
+    } catch (err) {
+      console.error('Error picking contact:', err);
+      if ((err as Error).name !== 'AbortError') {
+        alert('Failed to access contacts. Please ensure you have granted permission.');
+      }
+    }
+  };
+
   if (!captureMethod) {
     return (
       <div className="h-full bg-white flex flex-col">
@@ -53,6 +86,15 @@ export function AddContactScreen({ onBack, onSave }: AddContactScreenProps) {
           <p className="text-slate-600 mb-8">Choose the method that works best for you</p>
 
           <div className="space-y-4">
+            <button
+              onClick={handlePickFromPhone}
+              className="w-full bg-gradient-to-br from-cyan-500 to-blue-600 text-white rounded-2xl p-6 shadow-lg active:scale-95 transition-transform text-left"
+            >
+              <Smartphone size={32} className="mb-3" />
+              <div className="font-bold text-lg mb-1">Pick from Phone</div>
+              <div className="text-cyan-100 text-sm">Import contact from your device</div>
+            </button>
+
             <button
               onClick={() => setCaptureMethod('photo')}
               className="w-full bg-gradient-to-br from-orange-500 to-amber-600 text-white rounded-2xl p-6 shadow-lg active:scale-95 transition-transform text-left"
