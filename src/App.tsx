@@ -14,6 +14,7 @@ import { RemindersScreen } from './screens/RemindersScreen';
 import { AddReminderScreen } from './screens/AddReminderScreen';
 import { SettingsScreen } from './screens/SettingsScreen';
 import { MemoryDetailScreen } from './screens/MemoryDetailScreen';
+import { EditMemoryScreen } from './screens/EditMemoryScreen';
 import { useAuth } from './contexts/AuthContext';
 import { useContacts } from './hooks/useContacts';
 import { useReminders } from './hooks/useReminders';
@@ -30,6 +31,7 @@ type Screen =
   | 'record-conversation'
   | 'add-memory'
   | 'memory-detail'
+  | 'edit-memory'
   | 'search'
   | 'reminders'
   | 'add-reminder'
@@ -234,7 +236,23 @@ function App() {
             contacts={contacts}
             onBack={() => navigate('home')}
             onHome={() => navigate('home')}
+            onEdit={() => navigate('edit-memory')}
             onDelete={() => navigate('home')}
+          />
+        );
+
+      case 'edit-memory':
+        if (!selectedMemory) {
+          navigate('home');
+          return null;
+        }
+        return (
+          <EditMemoryScreen
+            memory={selectedMemory}
+            contacts={contacts}
+            onBack={() => navigate('memory-detail')}
+            onSave={() => navigate('memory-detail')}
+            onHome={() => navigate('home')}
           />
         );
 

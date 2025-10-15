@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ArrowLeft, Trash2, Clock, Tag, User, MoreVertical, Home } from 'lucide-react';
+import { ArrowLeft, Trash2, Clock, Tag, User, MoreVertical, Home, Edit } from 'lucide-react';
 import { Memory, useMemories } from '../hooks/useMemories';
 import { Contact } from '../hooks/useContacts';
 
@@ -8,10 +8,11 @@ interface MemoryDetailScreenProps {
   contacts: Contact[];
   onBack: () => void;
   onHome: () => void;
+  onEdit: () => void;
   onDelete: () => void;
 }
 
-export function MemoryDetailScreen({ memory, contacts, onBack, onHome, onDelete }: MemoryDetailScreenProps) {
+export function MemoryDetailScreen({ memory, contacts, onBack, onHome, onEdit, onDelete }: MemoryDetailScreenProps) {
   const { deleteMemory } = useMemories();
   const [showMenu, setShowMenu] = useState(false);
 
@@ -64,6 +65,17 @@ export function MemoryDetailScreen({ memory, contacts, onBack, onHome, onDelete 
             <MoreVertical size={24} className="text-white" />
             {showMenu && (
               <div className="absolute top-full right-0 mt-2 w-48 bg-white rounded-2xl shadow-2xl overflow-hidden z-10">
+                <button
+                  onClick={() => {
+                    setShowMenu(false);
+                    onEdit();
+                  }}
+                  className="w-full px-4 py-3 flex items-center gap-3 text-slate-700 active:bg-slate-50 transition-colors"
+                >
+                  <Edit size={18} />
+                  <span className="font-medium">Edit Memory</span>
+                </button>
+                <div className="h-px bg-slate-100"></div>
                 <button
                   onClick={handleDelete}
                   className="w-full px-4 py-3 flex items-center gap-3 text-red-600 active:bg-red-50 transition-colors"
