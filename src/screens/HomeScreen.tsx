@@ -1,4 +1,4 @@
-import { Search, Plus, Bell, Settings, Brain, Mic, FileText, Image as ImageIcon, Clock } from 'lucide-react';
+import { Search, Plus, Bell, Settings, Brain, Mic, FileText, Image as ImageIcon, Clock, Calendar } from 'lucide-react';
 import { Contact } from '../hooks/useContacts';
 import { Reminder } from '../hooks/useReminders';
 import { Memory } from '../hooks/useMemories';
@@ -47,6 +47,13 @@ export function HomeScreen({ onNavigate, contacts, reminders, memories }: HomeSc
             <p className="text-orange-100 text-sm">Your AI Memory Assistant</p>
           </div>
           <div className="flex items-center gap-2">
+            <button
+              onClick={() => alert('Calendar integration coming soon! This will sync with Google Calendar, Outlook, and Apple Calendar.')}
+              className="p-2.5 bg-white/20 backdrop-blur-sm rounded-full active:scale-95 transition-transform"
+              aria-label="Calendar (coming soon)"
+            >
+              <Calendar size={20} className="text-white" />
+            </button>
             <button
               onClick={() => onNavigate('reminders')}
               className="relative p-2.5 bg-white/20 backdrop-blur-sm rounded-full active:scale-95 transition-transform"
