@@ -23,7 +23,7 @@ export function SearchScreen({ onNavigate, onSelectMemory, onSelectContact, cont
   useEffect(() => {
     const performSearch = async () => {
       if (!query.trim()) {
-        setSearchResults([]);
+        setSearchResults(memories);
         return;
       }
 
@@ -40,10 +40,10 @@ export function SearchScreen({ onNavigate, onSelectMemory, onSelectContact, cont
 
     const timeoutId = setTimeout(performSearch, 300);
     return () => clearTimeout(timeoutId);
-  }, [query]);
+  }, [query, memories]);
 
   const filteredContacts = contacts.filter(contact => {
-    if (!query.trim()) return false;
+    if (!query.trim()) return true;
     const q = query.toLowerCase();
     return (
       contact.name.toLowerCase().includes(q) ||
@@ -123,24 +123,24 @@ export function SearchScreen({ onNavigate, onSelectMemory, onSelectContact, cont
       </div>
 
       <div className="flex-1 overflow-y-auto px-6 py-6">
-        {!query.trim() && (
+        {!query.trim() && memories.length === 0 && contacts.length === 0 && (
           <div className="text-center py-12">
             <SearchIcon size={64} className="text-slate-300 mx-auto mb-4" />
-            <p className="text-slate-600 font-medium mb-2">Search your memories</p>
+            <p className="text-slate-600 font-medium mb-2">No data yet</p>
             <p className="text-sm text-slate-500 max-w-xs mx-auto">
-              Find people, conversations, topics, and interactions
+              Start adding memories and contacts to search them
             </p>
           </div>
         )}
 
-        {query.trim() && isSearching && (
+        {isSearching && (
           <div className="text-center py-12">
             <div className="animate-spin w-8 h-8 border-4 border-orange-500 border-t-transparent rounded-full mx-auto mb-4" />
             <p className="text-slate-600">Searching...</p>
           </div>
         )}
 
-        {query.trim() && !isSearching && (
+        {!isSearching && (searchResults.length > 0 || filteredContacts.length > 0) && (
           <div className="space-y-6">
             {showMemories && searchResults.length > 0 && (
               <div>
