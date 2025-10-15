@@ -1,14 +1,15 @@
 import { useState } from 'react';
-import { ArrowLeft, Camera, User, Building2, Mail, Phone, MapPin, Tag, AlertCircle, Smartphone } from 'lucide-react';
+import { ArrowLeft, Camera, User, Building2, Mail, Phone, MapPin, Tag, AlertCircle, Smartphone, Home } from 'lucide-react';
 import { useContacts } from '../hooks/useContacts';
 import { FollowUpModal } from '../components/FollowUpModal';
 
 interface AddContactScreenProps {
   onBack: () => void;
   onSave: () => void;
+  onHome: () => void;
 }
 
-export function AddContactScreen({ onBack, onSave }: AddContactScreenProps) {
+export function AddContactScreen({ onBack, onSave, onHome }: AddContactScreenProps) {
   const { addContact, uploadPhoto } = useContacts();
   const [captureMethod, setCaptureMethod] = useState<'photo' | 'manual' | 'card' | null>(null);
   const [photoFile, setPhotoFile] = useState<File | null>(null);
@@ -74,14 +75,20 @@ export function AddContactScreen({ onBack, onSave }: AddContactScreenProps) {
   if (!captureMethod) {
     return (
       <div className="h-full bg-white flex flex-col">
-        <div className="px-6 py-4 flex items-center border-b border-slate-200">
-          <button onClick={onBack} className="p-2 -ml-2 active:bg-slate-100 rounded-full transition-colors" aria-label="Go back">
-            <ArrowLeft size={24} className="text-slate-700" />
+        <div className="px-6 py-4 flex items-center justify-between border-b border-slate-200">
+          <button
+            onClick={onBack}
+            className="flex items-center gap-2 px-4 py-2 bg-slate-100 hover:bg-slate-200 active:bg-slate-300 rounded-full transition-colors"
+            aria-label="Go back"
+          >
+            <ArrowLeft size={20} className="text-slate-700" />
+            <span className="font-medium text-slate-700">Back</span>
           </button>
-          <h1 className="text-xl font-bold text-slate-900 ml-4">Add Contact</h1>
+          <h1 className="text-xl font-bold text-slate-900">Add Contact</h1>
+          <div className="w-20"></div>
         </div>
 
-        <div className="flex-1 px-6 py-12">
+        <div className="flex-1 px-6 py-12 overflow-y-auto">
           <h2 className="text-2xl font-bold text-slate-900 mb-2">How would you like to add this contact?</h2>
           <p className="text-slate-600 mb-8">Choose the method that works best for you</p>
 
@@ -129,6 +136,16 @@ export function AddContactScreen({ onBack, onSave }: AddContactScreenProps) {
             </button>
           </div>
         </div>
+
+        <div className="px-6 py-4 bg-white border-t border-slate-200">
+          <button
+            onClick={onHome}
+            className="w-full flex items-center justify-center gap-2 py-4 bg-slate-100 hover:bg-slate-200 active:bg-slate-300 rounded-xl font-semibold text-slate-700 transition-colors"
+          >
+            <Home size={20} />
+            <span>Go to Home</span>
+          </button>
+        </div>
       </div>
     );
   }
@@ -137,11 +154,15 @@ export function AddContactScreen({ onBack, onSave }: AddContactScreenProps) {
     return (
       <div className="h-full bg-black flex flex-col">
         <div className="px-6 py-4 flex items-center justify-between">
-          <button onClick={() => setCaptureMethod(null)} className="p-2 -ml-2 active:bg-white/20 rounded-full transition-colors">
-            <ArrowLeft size={24} className="text-white" />
+          <button
+            onClick={() => setCaptureMethod(null)}
+            className="flex items-center gap-2 px-4 py-2 bg-white/20 hover:bg-white/30 active:bg-white/40 rounded-full transition-colors"
+          >
+            <ArrowLeft size={20} className="text-white" />
+            <span className="font-medium text-white">Back</span>
           </button>
-          <span className="text-white font-medium">Position their face in the circle</span>
-          <div className="w-10"></div>
+          <span className="text-white font-medium">Position face in circle</span>
+          <div className="w-24"></div>
         </div>
 
         <div className="flex-1 flex items-center justify-center relative">
@@ -226,40 +247,35 @@ export function AddContactScreen({ onBack, onSave }: AddContactScreenProps) {
   return (
     <div className="h-full bg-white flex flex-col">
       <div className="px-6 py-4 flex items-center justify-between border-b border-slate-200">
-        <div className="flex items-center">
-          <button
-            onClick={() => {
-              if (captureMethod) {
-                setCaptureMethod(null);
-                setFormData({
-                  name: '',
-                  company: '',
-                  title: '',
-                  email: '',
-                  phone: '',
-                  metAt: '',
-                  tags: '',
-                  conversation: '',
-                  notes: ''
-                });
-                setPhotoFile(null);
-                setPhotoPreview(null);
-              } else {
-                onBack();
-              }
-            }}
-            className="p-2 -ml-2 active:bg-slate-100 rounded-full transition-colors"
-            aria-label="Go back"
-          >
-            <ArrowLeft size={24} className="text-slate-700" />
-          </button>
-          <h1 className="text-xl font-bold text-slate-900 ml-4">Contact Details</h1>
-        </div>
+        <button
+          onClick={() => {
+            setCaptureMethod(null);
+            setFormData({
+              name: '',
+              company: '',
+              title: '',
+              email: '',
+              phone: '',
+              metAt: '',
+              tags: '',
+              conversation: '',
+              notes: ''
+            });
+            setPhotoFile(null);
+            setPhotoPreview(null);
+          }}
+          className="flex items-center gap-2 px-4 py-2 bg-slate-100 hover:bg-slate-200 active:bg-slate-300 rounded-full transition-colors"
+          aria-label="Go back"
+        >
+          <ArrowLeft size={20} className="text-slate-700" />
+          <span className="font-medium text-slate-700">Back</span>
+        </button>
+        <h1 className="text-xl font-bold text-slate-900">Contact Details</h1>
         <button
           type="submit"
           form="contact-form"
           disabled={loading}
-          className="text-orange-600 font-bold px-5 py-2.5 active:bg-orange-50 rounded-lg transition-colors disabled:opacity-50 text-lg"
+          className="text-orange-600 font-bold px-5 py-2.5 active:bg-orange-50 rounded-lg transition-colors disabled:opacity-50"
         >
           {loading ? 'Saving...' : 'Save'}
         </button>
@@ -436,7 +452,7 @@ export function AddContactScreen({ onBack, onSave }: AddContactScreenProps) {
         </div>
       </form>
 
-      <div className="px-6 py-4 bg-white border-t border-slate-200">
+      <div className="px-6 py-4 bg-white border-t border-slate-200 space-y-3">
         <button
           type="submit"
           form="contact-form"
@@ -444,6 +460,14 @@ export function AddContactScreen({ onBack, onSave }: AddContactScreenProps) {
           className="w-full bg-gradient-to-r from-orange-500 to-amber-500 text-white font-bold py-4 rounded-2xl shadow-lg active:scale-95 transition-transform disabled:opacity-50"
         >
           {loading ? 'Saving Contact...' : 'Save Contact'}
+        </button>
+        <button
+          type="button"
+          onClick={onHome}
+          className="w-full flex items-center justify-center gap-2 py-4 bg-slate-100 hover:bg-slate-200 active:bg-slate-300 rounded-xl font-semibold text-slate-700 transition-colors"
+        >
+          <Home size={20} />
+          <span>Go to Home</span>
         </button>
       </div>
 

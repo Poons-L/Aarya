@@ -158,6 +158,7 @@ function App() {
           <AddContactScreen
             onBack={() => navigate('home')}
             onSave={() => navigate('home')}
+            onHome={() => navigate('home')}
           />
         );
 
