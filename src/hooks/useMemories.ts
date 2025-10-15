@@ -39,6 +39,38 @@ export function useMemories() {
 
   useEffect(() => {
     fetchMemories();
+
+    const setupRealtimeSubscription = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return null;
+
+      const channel = supabase
+        .channel('memories-changes')
+        .on(
+          'postgres_changes',
+          {
+            event: '*',
+            schema: 'public',
+            table: 'memories',
+          },
+          () => {
+            fetchMemories();
+          }
+        )
+        .subscribe();
+
+      return channel;
+    };
+
+    let channelPromise = setupRealtimeSubscription();
+
+    return () => {
+      channelPromise.then(channel => {
+        if (channel) {
+          supabase.removeChannel(channel);
+        }
+      });
+    };
   }, []);
 
   const addMemory = async (memoryData: {
