@@ -120,11 +120,25 @@ export function useMemories() {
         .from('memories')
         .select('*')
         .eq('user_id', user.id)
-        .or(`text.ilike.%${query}%,summary.ilike.%${query}%`)
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      return { data: data || [], error: null };
+
+      if (!query.trim()) {
+        return { data: data || [], error: null };
+      }
+
+      const lowerQuery = query.toLowerCase();
+      const filtered = (data || []).filter(memory => {
+        const textMatch = memory.text?.toLowerCase().includes(lowerQuery);
+        const summaryMatch = memory.summary?.toLowerCase().includes(lowerQuery);
+        const tagMatch = memory.tags?.some((tag: string) =>
+          tag.toLowerCase().includes(lowerQuery)
+        );
+        return textMatch || summaryMatch || tagMatch;
+      });
+
+      return { data: filtered, error: null };
     } catch (error: any) {
       console.error('Error searching memories:', error);
       return { data: [], error: error.message };
@@ -184,9 +198,45 @@ export function useMemories() {
       const result = await response.json();
       return type === 'tags' ? result.tags : result.result;
     } catch (error) {
-      console.error('Error summarizing text:', error);
-      throw error;
+      console.error('Error summarizing text, using fallback:', error);
+      return fallbackSummarize(text, type);
     }
+  };
+
+  const fallbackSummarize = (text: string, type: 'summary' | 'tags' | 'followup' = 'summary') => {
+    if (type === 'summary') {
+      const sentences = text.match(/[^.!?]+[.!?]+/g) || [text];
+      const firstSentence = sentences[0]?.trim() || text;
+      if (firstSentence.length > 150) {
+        return firstSentence.substring(0, 147) + '...';
+      }
+      return firstSentence;
+    }
+
+    if (type === 'tags') {
+      const commonWords = new Set([
+        'the', 'a', 'an', 'and', 'or', 'but', 'in', 'on', 'at', 'to', 'for',
+        'of', 'with', 'by', 'from', 'about', 'as', 'is', 'was', 'are', 'were',
+        'been', 'be', 'have', 'has', 'had', 'do', 'does', 'did', 'will', 'would',
+      ]);
+
+      const words = text.toLowerCase()
+        .replace(/[^\w\s]/g, ' ')
+        .split(/\s+/)
+        .filter(word => word.length > 3 && !commonWords.has(word));
+
+      const wordFreq = new Map<string, number>();
+      words.forEach(word => {
+        wordFreq.set(word, (wordFreq.get(word) || 0) + 1);
+      });
+
+      return Array.from(wordFreq.entries())
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 3)
+        .map(([word]) => word);
+    }
+
+    return text;
   };
 
   return {
