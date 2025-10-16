@@ -1,7 +1,8 @@
-import { Search, Plus, Bell, Settings, Brain, Mic, FileText, Image as ImageIcon, Clock, Calendar } from 'lucide-react';
+import { Search, Plus, Bell, Settings, Brain, Mic, FileText, Image as ImageIcon, Clock, Calendar, Shield } from 'lucide-react';
 import { Contact } from '../hooks/useContacts';
 import { Reminder } from '../hooks/useReminders';
 import { Memory } from '../hooks/useMemories';
+import { useAuth } from '../contexts/AuthContext';
 
 interface HomeScreenProps {
   onNavigate: (screen: string) => void;
@@ -13,6 +14,7 @@ interface HomeScreenProps {
 }
 
 export function HomeScreen({ onNavigate, onSelectMemory, onSelectContact, contacts, reminders, memories }: HomeScreenProps) {
+  const { isAdmin } = useAuth();
   const upcomingReminders = reminders.filter(r => !r.completed).length;
   const recentMemories = memories.slice(0, 10);
 
@@ -49,6 +51,15 @@ export function HomeScreen({ onNavigate, onSelectMemory, onSelectContact, contac
             <p className="text-orange-100 text-sm">Your AI Memory Assistant</p>
           </div>
           <div className="flex items-center gap-2">
+            {isAdmin && (
+              <button
+                onClick={() => onNavigate('admin')}
+                className="p-2.5 bg-red-500/90 backdrop-blur-sm rounded-full active:scale-95 transition-transform"
+                aria-label="Admin Dashboard"
+              >
+                <Shield size={20} className="text-white" />
+              </button>
+            )}
             <button
               onClick={() => alert('Calendar integration coming soon! This will sync with Google Calendar, Outlook, and Apple Calendar.')}
               className="p-2.5 bg-white/20 backdrop-blur-sm rounded-full active:scale-95 transition-transform"

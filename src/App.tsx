@@ -16,6 +16,7 @@ import { SettingsScreen } from './screens/SettingsScreen';
 import { MemoryDetailScreen } from './screens/MemoryDetailScreen';
 import { EditMemoryScreen } from './screens/EditMemoryScreen';
 import { EventsAgendaScreen } from './screens/EventsAgendaScreen';
+import AdminDashboardScreen from './screens/AdminDashboardScreen';
 import { useAuth } from './contexts/AuthContext';
 import { useContacts } from './hooks/useContacts';
 import { useReminders } from './hooks/useReminders';
@@ -37,7 +38,8 @@ type Screen =
   | 'reminders'
   | 'add-reminder'
   | 'settings'
-  | 'events-agenda';
+  | 'events-agenda'
+  | 'admin';
 
 function App() {
   const { user, loading: authLoading } = useAuth();
@@ -303,6 +305,14 @@ function App() {
       case 'events-agenda':
         return (
           <EventsAgendaScreen
+            onBack={() => navigate('home')}
+            onHome={() => navigate('home')}
+          />
+        );
+
+      case 'admin':
+        return (
+          <AdminDashboardScreen
             onBack={() => navigate('home')}
             onHome={() => navigate('home')}
           />
