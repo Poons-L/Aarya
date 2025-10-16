@@ -201,6 +201,25 @@ export function HomeScreen({ onNavigate, onSelectMemory, onSelectContact, contac
             </button>
           </div>
         </div>
+
+        <div>
+          <h2 className="text-lg font-bold text-slate-900 mb-4">Events & Agenda</h2>
+          <button
+            onClick={() => onNavigate('events-agenda')}
+            className="w-full bg-gradient-to-br from-emerald-500 to-teal-600 text-white rounded-2xl p-6 shadow-lg active:scale-95 transition-transform text-left"
+          >
+            <div className="flex items-center justify-between mb-3">
+              <Calendar size={32} />
+              <span className="text-xs font-bold bg-white/20 px-3 py-1 rounded-full">
+                PREVIEW
+              </span>
+            </div>
+            <div className="font-bold text-lg mb-1">Events & Sessions</div>
+            <div className="text-sm text-emerald-100">
+              Import schedules, plan meetings, and manage event agendas
+            </div>
+          </button>
+        </div>
       </div>
 
       <div className="bg-white border-t border-slate-200 px-6 py-4 flex items-center justify-around">
