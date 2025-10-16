@@ -9,6 +9,8 @@ export interface Memory {
   tags: string[];
   source_type: 'voice' | 'text' | 'ocr';
   linked_contact_id: string | null;
+  event_id: string | null;
+  session_id: string | null;
   memory_date: string;
   created_at: string;
   updated_at: string;
@@ -80,6 +82,8 @@ export function useMemories() {
     tags?: string[];
     source_type: 'voice' | 'text' | 'ocr';
     linked_contact_id?: string;
+    event_id?: string;
+    session_id?: string;
     memory_date?: string;
   }) => {
     try {
@@ -95,6 +99,8 @@ export function useMemories() {
           tags: memoryData.tags || [],
           source_type: memoryData.source_type,
           linked_contact_id: memoryData.linked_contact_id || null,
+          event_id: memoryData.event_id || null,
+          session_id: memoryData.session_id || null,
           memory_date: memoryData.memory_date || new Date().toISOString(),
         })
         .select()

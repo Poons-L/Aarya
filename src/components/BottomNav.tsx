@@ -2,16 +2,19 @@ import { Brain, Search, Plus, Bell, Settings } from 'lucide-react';
 
 interface BottomNavProps {
   active?: string;
+  currentScreen?: string;
   onNavigate: (screen: string) => void;
 }
 
-export function BottomNav({ active = 'home', onNavigate }: BottomNavProps) {
+export function BottomNav({ active, currentScreen, onNavigate }: BottomNavProps) {
+  const activeScreen = active || currentScreen || 'home';
+
   return (
     <div className="bg-white border-t border-slate-200 px-6 py-4 flex items-center justify-around">
       <button
         onClick={() => onNavigate('home')}
         className={`flex flex-col items-center gap-1 ${
-          active === 'home' ? 'text-orange-600' : 'text-slate-400'
+          activeScreen === 'home' ? 'text-orange-600' : 'text-slate-400'
         }`}
       >
         <Brain size={24} />
@@ -20,7 +23,7 @@ export function BottomNav({ active = 'home', onNavigate }: BottomNavProps) {
       <button
         onClick={() => onNavigate('search')}
         className={`flex flex-col items-center gap-1 ${
-          active === 'search' ? 'text-orange-600' : 'text-slate-400'
+          activeScreen === 'search' ? 'text-orange-600' : 'text-slate-400'
         }`}
       >
         <Search size={24} />
@@ -37,7 +40,7 @@ export function BottomNav({ active = 'home', onNavigate }: BottomNavProps) {
       <button
         onClick={() => onNavigate('reminders')}
         className={`flex flex-col items-center gap-1 ${
-          active === 'reminders' ? 'text-orange-600' : 'text-slate-400'
+          activeScreen === 'reminders' ? 'text-orange-600' : 'text-slate-400'
         }`}
       >
         <Bell size={24} />
@@ -46,7 +49,7 @@ export function BottomNav({ active = 'home', onNavigate }: BottomNavProps) {
       <button
         onClick={() => onNavigate('settings')}
         className={`flex flex-col items-center gap-1 ${
-          active === 'settings' ? 'text-orange-600' : 'text-slate-400'
+          activeScreen === 'settings' ? 'text-orange-600' : 'text-slate-400'
         }`}
       >
         <Settings size={24} />
