@@ -1,4 +1,4 @@
-import { ArrowLeft, User, Bell, Lock, Download, HelpCircle, LogOut, ChevronRight, FileJson, FileSpreadsheet } from 'lucide-react';
+import { ArrowLeft, User, Bell, Lock, Download, HelpCircle, LogOut, ChevronRight, FileJson, FileSpreadsheet, Calendar } from 'lucide-react';
 import { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { BottomNav } from '../components/BottomNav';
@@ -150,6 +150,29 @@ export function SettingsScreen({ onBack, onNavigate }: SettingsScreenProps) {
                 <span className="font-medium text-slate-900">Voice Recording</span>
               </div>
               <ChevronRight size={20} className="text-slate-400" />
+            </button>
+          </div>
+        </div>
+
+        <div>
+          <h2 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-3 px-2">
+            More
+          </h2>
+          <div className="bg-white rounded-2xl overflow-hidden shadow-sm border border-slate-100">
+            <button
+              onClick={() => onNavigate('events-agenda')}
+              className="w-full px-5 py-4 flex items-center justify-between active:bg-slate-50 transition-colors relative"
+            >
+              <div className="flex items-center gap-3">
+                <Calendar size={20} className="text-slate-600" />
+                <span className="font-medium text-slate-900">Events & Agenda</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-bold text-amber-600 bg-amber-50 px-2 py-1 rounded-full">
+                  PREVIEW
+                </span>
+                <ChevronRight size={20} className="text-slate-400" />
+              </div>
             </button>
           </div>
         </div>

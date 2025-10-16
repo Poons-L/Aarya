@@ -301,7 +301,12 @@ function App() {
         );
 
       case 'events-agenda':
-        return <EventsAgendaScreen onBack={() => navigate('home')} />;
+        return (
+          <EventsAgendaScreen
+            onBack={() => navigate('home')}
+            onHome={() => navigate('home')}
+          />
+        );
 
       default:
         return <WelcomeScreen onGetStarted={() => navigate('auth')} />;

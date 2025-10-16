@@ -1,11 +1,12 @@
 import { useState } from 'react';
-import { ArrowLeft, Calendar, MapPin, Clock, Users, Upload, Plus, Info } from 'lucide-react';
+import { ArrowLeft, Calendar, MapPin, Clock, Users, Upload, Plus, Info, Home } from 'lucide-react';
 
 interface EventsAgendaScreenProps {
   onBack: () => void;
+  onHome: () => void;
 }
 
-export function EventsAgendaScreen({ onBack }: EventsAgendaScreenProps) {
+export function EventsAgendaScreen({ onBack, onHome }: EventsAgendaScreenProps) {
   const [showToast, setShowToast] = useState(false);
   const [toastMessage, setToastMessage] = useState('');
 
@@ -37,12 +38,22 @@ export function EventsAgendaScreen({ onBack }: EventsAgendaScreenProps) {
     <div className="h-full bg-gradient-to-br from-slate-50 to-slate-100 flex flex-col">
       <div className="px-6 py-4 bg-white border-b border-slate-200">
         <div className="flex items-center justify-between mb-4">
-          <button
-            onClick={onBack}
-            className="text-slate-600 active:text-slate-900 transition-colors"
-          >
-            <ArrowLeft size={24} />
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={onBack}
+              className="text-slate-600 active:text-slate-900 transition-colors"
+              aria-label="Go back"
+            >
+              <ArrowLeft size={24} />
+            </button>
+            <button
+              onClick={onHome}
+              className="text-slate-600 active:text-slate-900 transition-colors"
+              aria-label="Go to home"
+            >
+              <Home size={24} />
+            </button>
+          </div>
           <div className="flex items-center gap-2 px-3 py-1.5 bg-amber-50 border border-amber-200 rounded-full">
             <Info size={14} className="text-amber-600" />
             <span className="text-xs font-semibold text-amber-700">Preview Mode</span>
