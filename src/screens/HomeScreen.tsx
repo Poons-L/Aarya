@@ -50,11 +50,14 @@ export function HomeScreen({ onNavigate, onSelectMemory, onSelectContact, contac
           </div>
           <div className="flex items-center gap-2">
             <button
-              onClick={() => alert('Calendar integration coming soon! This will sync with Google Calendar, Outlook, and Apple Calendar.')}
-              className="p-2.5 bg-white/20 backdrop-blur-sm rounded-full active:scale-95 transition-transform"
-              aria-label="Calendar (coming soon)"
+              onClick={() => onNavigate('events-agenda')}
+              className="relative p-2.5 bg-white/20 backdrop-blur-sm rounded-full active:scale-95 transition-transform"
+              aria-label="Events & Agenda (Coming Soon)"
             >
               <Calendar size={20} className="text-white" />
+              <span className="absolute -top-0.5 -right-0.5 bg-amber-400 text-amber-900 text-[9px] font-bold px-1.5 py-0.5 rounded-full shadow-sm">
+                NEW
+              </span>
             </button>
             <button
               onClick={() => onNavigate('reminders')}
