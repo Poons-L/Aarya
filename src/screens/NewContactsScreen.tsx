@@ -185,10 +185,7 @@ export function NewContactsScreen({ onSelectContact, onAddContact }: NewContacts
             {filteredAndSortedContacts.map(contact => (
               <div
                 key={contact.id}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onSelectContact(contact.id);
-                }}
+                onClick={() => onSelectContact(contact.id)}
                 className="w-full bg-white rounded-xl p-4 shadow-sm border border-slate-200 active:scale-98 transition-transform cursor-pointer"
               >
                 <div className="flex items-center gap-3 pointer-events-none">
