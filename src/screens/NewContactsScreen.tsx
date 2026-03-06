@@ -1,10 +1,13 @@
 import { useState, useMemo } from 'react';
 import { Search, Filter, Users, Plus, X, ChevronDown } from 'lucide-react';
 import { useContacts } from '../hooks/useContacts';
-import { useNavigation } from '../contexts/NavigationContext';
 
-export function NewContactsScreen() {
-  const { navigate, viewContact } = useNavigation();
+interface NewContactsScreenProps {
+  onViewContact: (contactId: string) => void;
+  onAddContact: () => void;
+}
+
+export function NewContactsScreen({ onViewContact, onAddContact }: NewContactsScreenProps) {
   const { contacts } = useContacts();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedTag, setSelectedTag] = useState<string>('');
@@ -71,7 +74,7 @@ export function NewContactsScreen() {
             </p>
           </div>
           <button
-            onClick={() => navigate({ name: 'addContact' })}
+            onClick={onAddContact}
             className="bg-gradient-to-r from-orange-500 to-pink-500 text-white p-3 rounded-full shadow-lg active:scale-95 transition-transform"
           >
             <Plus size={24} />
@@ -170,7 +173,7 @@ export function NewContactsScreen() {
             </p>
             {!searchQuery && !selectedTag && (
               <button
-                onClick={() => navigate({ name: 'addContact' })}
+                onClick={onAddContact}
                 className="bg-gradient-to-r from-orange-500 to-pink-500 text-white px-6 py-2 rounded-lg font-medium active:scale-95 transition-transform"
               >
                 Add First Contact
@@ -180,22 +183,13 @@ export function NewContactsScreen() {
         ) : (
           <div className="space-y-2 pb-4">
             {filteredAndSortedContacts.map(contact => (
-              <button
+              <div
                 key={contact.id}
-                type="button"
                 onClick={() => {
                   console.log('Contact card clicked:', contact.id, contact.name);
-                  viewContact(contact.id);
+                  onViewContact(contact.id);
                 }}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' || e.key === ' ') {
-                    e.preventDefault();
-                    console.log('Contact card activated via keyboard:', contact.id, contact.name);
-                    viewContact(contact.id);
-                  }
-                }}
-                tabIndex={0}
-                className="w-full bg-white rounded-xl p-4 shadow-sm border border-slate-200 active:scale-98 transition-transform text-left cursor-pointer"
+                className="w-full bg-white rounded-xl p-4 shadow-sm border border-slate-200 active:scale-98 transition-transform cursor-pointer"
               >
                 <div className="flex items-center gap-3">
                   <div className="w-14 h-14 rounded-full bg-gradient-to-br from-orange-400 to-pink-500 flex items-center justify-center text-white font-semibold text-lg flex-shrink-0">
@@ -239,7 +233,7 @@ export function NewContactsScreen() {
                     )}
                   </div>
                 </div>
-              </button>
+              </div>
             ))}
           </div>
         )}

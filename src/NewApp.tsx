@@ -78,7 +78,15 @@ function NewApp() {
       case 'home':
         return <NewHomeScreen />;
       case 'contacts':
-        return <NewContactsScreen />;
+        return (
+          <NewContactsScreen
+            onViewContact={(contactId) => {
+              console.log('NewApp: onViewContact called with', contactId);
+              navigate({ name: 'contactDetail', contactId });
+            }}
+            onAddContact={() => navigate({ name: 'addContact' })}
+          />
+        );
       case 'contactDetail':
         return <NewContactDetailScreen contactId={screen.contactId} onBack={goBack} />;
       case 'addContact':
