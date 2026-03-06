@@ -183,11 +183,22 @@ export function NewContactsScreen({ onNavigate, dispatch }: NewContactsScreenPro
         ) : (
           <div className="space-y-2 pb-4">
             {filteredAndSortedContacts.map(contact => (
-              <div
+              <button
                 key={contact.id}
-                onClick={() => dispatch({ type: 'VIEW_CONTACT', contactId: contact.id })}
-                style={{ cursor: 'pointer' }}
-                className="w-full bg-white rounded-xl p-4 shadow-sm border border-slate-200 active:scale-98 transition-transform"
+                type="button"
+                onClick={() => {
+                  console.log('Contact card clicked:', contact.id, contact.name);
+                  dispatch({ type: 'VIEW_CONTACT', contactId: contact.id });
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    console.log('Contact card activated via keyboard:', contact.id, contact.name);
+                    dispatch({ type: 'VIEW_CONTACT', contactId: contact.id });
+                  }
+                }}
+                tabIndex={0}
+                className="w-full bg-white rounded-xl p-4 shadow-sm border border-slate-200 active:scale-98 transition-transform text-left cursor-pointer"
               >
                 <div className="flex items-center gap-3">
                   <div className="w-14 h-14 rounded-full bg-gradient-to-br from-orange-400 to-pink-500 flex items-center justify-center text-white font-semibold text-lg flex-shrink-0">
@@ -231,7 +242,7 @@ export function NewContactsScreen({ onNavigate, dispatch }: NewContactsScreenPro
                     )}
                   </div>
                 </div>
-              </div>
+              </button>
             ))}
           </div>
         )}
