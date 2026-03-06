@@ -20,9 +20,29 @@ export function NewContactDetailScreen({ contactId, onBack, onEditContact, onAdd
   const [showAddInteraction, setShowAddInteraction] = useState(false);
   const [showCRMExport, setShowCRMExport] = useState(false);
 
+  console.log('NewContactDetailScreen rendered with contactId:', contactId);
+  console.log('Contacts array length:', contacts.length);
+  console.log('Found contact:', contact);
+
   if (!contact) {
-    onBack();
-    return null;
+    console.log('Contact not found! Calling onBack()');
+    return (
+      <div className="h-full bg-gradient-to-br from-slate-50 to-slate-100 flex flex-col items-center justify-center">
+        <div className="text-center">
+          <p className="text-slate-600 mb-4">Contact not found</p>
+          <button
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              onBack();
+            }}
+            className="bg-orange-500 text-white px-6 py-2 rounded-lg"
+          >
+            Go Back
+          </button>
+        </div>
+      </div>
+    );
   }
 
   const interactionHistory = contact.interaction_history || [];
@@ -168,11 +188,25 @@ Provide 3 specific, personalized conversation starters that reference their work
   return (
     <div className="h-full bg-gradient-to-br from-slate-50 to-slate-100 flex flex-col">
       <div className="bg-white border-b border-slate-200 px-6 py-4 flex items-center justify-between">
-        <button onClick={onBack} className="text-slate-600 active:text-slate-900">
+        <button
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            onBack();
+          }}
+          className="text-slate-600 active:text-slate-900"
+        >
           <ArrowLeft size={24} />
         </button>
         <h1 className="text-lg font-semibold text-slate-900">Contact Details</h1>
-        <button onClick={() => onEditContact(contactId)} className="text-orange-600 active:text-orange-800">
+        <button
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            onEditContact(contactId);
+          }}
+          className="text-orange-600 active:text-orange-800"
+        >
           <Edit2 size={20} />
         </button>
       </div>
@@ -238,7 +272,11 @@ Provide 3 specific, personalized conversation starters that reference their work
           )}
 
           <button
-            onClick={generateAIStarters}
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              generateAIStarters();
+            }}
             disabled={generatingAI}
             className="w-full bg-gradient-to-r from-purple-500 to-pink-500 text-white p-4 rounded-xl shadow-md mb-4 active:scale-98 transition-transform disabled:opacity-50"
           >
@@ -273,7 +311,11 @@ Provide 3 specific, personalized conversation starters that reference their work
             <h3 className="text-sm font-semibold text-slate-700 mb-3">Quick Actions</h3>
             <div className="space-y-2">
               <button
-                onClick={handleSendEmail}
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  handleSendEmail();
+                }}
                 disabled={!contact.email}
                 className={`w-full flex items-center gap-3 p-3 rounded-xl transition-all ${
                   contact.email
@@ -291,7 +333,11 @@ Provide 3 specific, personalized conversation starters that reference their work
               </button>
 
               <button
-                onClick={handleViewLinkedIn}
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  handleViewLinkedIn();
+                }}
                 disabled={!contact.linkedin_url}
                 className={`w-full flex items-center gap-3 p-3 rounded-xl transition-all ${
                   contact.linkedin_url
@@ -309,7 +355,11 @@ Provide 3 specific, personalized conversation starters that reference their work
               </button>
 
               <button
-                onClick={handleScheduleMeeting}
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  handleScheduleMeeting();
+                }}
                 className="w-full flex items-center gap-3 p-3 rounded-xl bg-gradient-to-r from-green-500 to-emerald-600 text-white active:scale-98 transition-all"
               >
                 <CalendarPlus size={20} />
@@ -321,7 +371,11 @@ Provide 3 specific, personalized conversation starters that reference their work
 
               <div className="relative">
                 <button
-                  onClick={() => setShowCRMExport(!showCRMExport)}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    setShowCRMExport(!showCRMExport);
+                  }}
                   className="w-full flex items-center gap-3 p-3 rounded-xl bg-gradient-to-r from-purple-500 to-purple-600 text-white active:scale-98 transition-all"
                 >
                   <Download size={20} />
@@ -335,7 +389,11 @@ Provide 3 specific, personalized conversation starters that reference their work
                 {showCRMExport && (
                   <div className="mt-2 space-y-2 pl-4">
                     <button
-                      onClick={handleExportHubSpot}
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        handleExportHubSpot();
+                      }}
                       className="w-full flex items-center gap-3 p-3 rounded-xl bg-orange-50 border border-orange-200 text-orange-700 active:scale-98 transition-all"
                     >
                       <Download size={18} />
@@ -346,7 +404,11 @@ Provide 3 specific, personalized conversation starters that reference their work
                     </button>
 
                     <button
-                      onClick={handleExportSalesforce}
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        handleExportSalesforce();
+                      }}
                       className="w-full flex items-center gap-3 p-3 rounded-xl bg-blue-50 border border-blue-200 text-blue-700 active:scale-98 transition-all"
                     >
                       <Download size={18} />
@@ -360,7 +422,11 @@ Provide 3 specific, personalized conversation starters that reference their work
               </div>
 
               <button
-                onClick={handleSaveAsContact}
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  handleSaveAsContact();
+                }}
                 className="w-full flex items-center gap-3 p-3 rounded-xl bg-gradient-to-r from-amber-500 to-orange-600 text-white active:scale-98 transition-all"
               >
                 <User size={20} />
@@ -435,7 +501,11 @@ Provide 3 specific, personalized conversation starters that reference their work
                 <h3 className="text-sm font-semibold text-slate-700">Interaction History</h3>
               </div>
               <button
-                onClick={() => setShowAddInteraction(!showAddInteraction)}
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  setShowAddInteraction(!showAddInteraction);
+                }}
                 className="text-orange-600 active:text-orange-800"
               >
                 <Plus size={20} />
@@ -452,7 +522,11 @@ Provide 3 specific, personalized conversation starters that reference their work
                   className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-orange-400"
                 />
                 <button
-                  onClick={addInteractionNote}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    addInteractionNote();
+                  }}
                   disabled={!newInteraction.trim()}
                   className="w-full bg-orange-500 text-white py-2 rounded-lg text-sm font-medium disabled:opacity-50 active:scale-98 transition-transform"
                 >
@@ -483,7 +557,11 @@ Provide 3 specific, personalized conversation starters that reference their work
           </div>
 
           <button
-            onClick={() => onAddReminder(contactId)}
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              onAddReminder(contactId);
+            }}
             className="w-full bg-gradient-to-r from-amber-500 to-orange-500 text-white p-4 rounded-xl shadow-md active:scale-98 transition-transform"
           >
             <div className="flex items-center justify-center gap-2">
