@@ -1,4 +1,5 @@
-import { useState, useEffect } from 'react';
+import { useEffect } from 'react';
+import { BrowserRouter, Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { WelcomeScreen } from './screens/WelcomeScreen';
 import { OnboardingScreen } from './screens/OnboardingScreen';
 import { AuthScreen } from './screens/AuthScreen';
@@ -14,46 +15,37 @@ import { BottomTabNav } from './components/BottomTabNav';
 import { useAuth } from './contexts/AuthContext';
 import { useReminders } from './hooks/useReminders';
 
-type Screen =
-  | 'welcome'
-  | 'onboarding'
-  | 'auth'
-  | 'home'
-  | 'contacts'
-  | 'contact-detail'
-  | 'add-contact'
-  | 'edit-contact'
-  | 'quick-capture'
-  | 'reminders'
-  | 'add-reminder'
-  | 'profile';
-
 type Tab = 'home' | 'contacts' | 'reminders' | 'profile';
 
-function NewApp() {
+function AppContent() {
   const { user, loading: authLoading } = useAuth();
   const { reminders } = useReminders();
-  const [currentScreen, setCurrentScreen] = useState<Screen>('welcome');
-  const [activeTab, setActiveTab] = useState<Tab>('home');
-  const [selectedContactId, setSelectedContactId] = useState<string | null>(null);
-  const [contactToEdit, setContactToEdit] = useState<any>(null);
-  const [preselectedContactId, setPreselectedContactId] = useState<string | null>(null);
-  const [viewingContactId, setViewingContactId] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (!authLoading) {
-      if (user) {
-        setCurrentScreen('home');
-        setActiveTab('home');
-      } else {
-        setCurrentScreen('welcome');
-      }
-    }
-  }, [user, authLoading]);
+  const location = useLocation();
+  const navigate = useNavigate();
 
   const overdueCount = reminders.filter(
     r => !r.completed && new Date(r.due_date) < new Date()
   ).length;
+
+  // Determine active tab from current route
+  const getActiveTab = (): Tab => {
+    const path = location.pathname;
+    if (path.startsWith('/contacts')) return 'contacts';
+    if (path.startsWith('/reminders')) return 'reminders';
+    if (path.startsWith('/profile')) return 'profile';
+    return 'home';
+  };
+
+  const activeTab = getActiveTab();
+
+  // Determine if bottom nav should be shown
+  const showBottomNav = user && (
+    location.pathname === '/home' ||
+    location.pathname === '/contacts' ||
+    location.pathname.startsWith('/contacts/') ||
+    location.pathname === '/reminders' ||
+    location.pathname === '/profile'
+  );
 
   if (authLoading) {
     return (
@@ -63,172 +55,36 @@ function NewApp() {
     );
   }
 
-  const navigate = (screen: Screen) => {
-    setCurrentScreen(screen);
-  };
-
   const handleTabChange = (tab: Tab) => {
-    setActiveTab(tab);
-    setViewingContactId(null);
-    switch (tab) {
-      case 'home':
-        navigate('home');
-        break;
-      case 'contacts':
-        navigate('contacts');
-        break;
-      case 'reminders':
-        navigate('reminders');
-        break;
-      case 'profile':
-        navigate('profile');
-        break;
-    }
-  };
-
-  const showBottomNav =
-    user &&
-    ['home', 'contacts', 'reminders', 'profile'].includes(currentScreen);
-
-  const renderScreen = () => {
-    switch (currentScreen) {
-      case 'welcome':
-        return <WelcomeScreen onGetStarted={() => navigate('onboarding')} />;
-
-      case 'onboarding':
-        return <OnboardingScreen onComplete={() => navigate('auth')} />;
-
-      case 'auth':
-        return (
-          <AuthScreen
-            onBack={() => navigate('welcome')}
-            onAuth={() => navigate('home')}
-          />
-        );
-
-      case 'home':
-        return (
-          <NewHomeScreen
-            onNavigate={navigate}
-            onSelectContact={(contactId) => {
-              setSelectedContactId(contactId);
-              navigate('contact-detail');
-            }}
-          />
-        );
-
-      case 'contacts':
-        if (viewingContactId) {
-          return (
-            <NewContactDetailScreen
-              contactId={viewingContactId}
-              onBack={() => setViewingContactId(null)}
-              onEdit={() => {
-                setContactToEdit(viewingContactId);
-                navigate('edit-contact');
-              }}
-              onAddReminder={() => {
-                setPreselectedContactId(viewingContactId);
-                navigate('add-reminder');
-              }}
-            />
-          );
-        }
-        return (
-          <NewContactsScreen
-            onSelectContact={setViewingContactId}
-            onAddContact={() => {
-              setContactToEdit(null);
-              navigate('add-contact');
-            }}
-          />
-        );
-
-      case 'contact-detail':
-        if (!selectedContactId) {
-          navigate('contacts');
-          return null;
-        }
-        return (
-          <NewContactDetailScreen
-            contactId={selectedContactId}
-            onBack={() => navigate('contacts')}
-            onEdit={() => {
-              setContactToEdit(selectedContactId);
-              navigate('edit-contact');
-            }}
-            onAddReminder={() => {
-              setPreselectedContactId(selectedContactId);
-              navigate('add-reminder');
-            }}
-          />
-        );
-
-      case 'add-contact':
-        return (
-          <FullAddContactScreen
-            onBack={() => navigate(activeTab)}
-            onSave={() => navigate(activeTab)}
-          />
-        );
-
-      case 'edit-contact':
-        return (
-          <FullAddContactScreen
-            onBack={() => navigate('contact-detail')}
-            onSave={() => navigate('contact-detail')}
-            contactToEdit={contactToEdit}
-          />
-        );
-
-      case 'quick-capture':
-        return (
-          <QuickCaptureScreen
-            onBack={() => navigate('home')}
-            onSave={() => navigate('home')}
-          />
-        );
-
-      case 'reminders':
-        return (
-          <NewRemindersScreen
-            onAddReminder={() => {
-              setPreselectedContactId(null);
-              navigate('add-reminder');
-            }}
-            onSelectContact={(contactId) => {
-              setSelectedContactId(contactId);
-              navigate('contact-detail');
-            }}
-          />
-        );
-
-      case 'add-reminder':
-        return (
-          <NewAddReminderScreen
-            onBack={() => navigate('reminders')}
-            onSave={() => navigate('reminders')}
-            preselectedContactId={preselectedContactId || undefined}
-          />
-        );
-
-      case 'profile':
-        return (
-          <NewProfileScreen
-            onSignOut={() => navigate('welcome')}
-          />
-        );
-
-      default:
-        return <WelcomeScreen onGetStarted={() => navigate('auth')} />;
-    }
+    navigate(`/${tab}`);
   };
 
   return (
     <div className="min-h-screen bg-slate-50 flex justify-center">
       <div className="w-full max-w-[430px] min-h-screen bg-white shadow-xl flex flex-col">
         <div className="flex-1 overflow-hidden">
-          {renderScreen()}
+          <Routes>
+            {/* Public routes */}
+            <Route path="/welcome" element={<WelcomeScreen onGetStarted={() => navigate('/onboarding')} />} />
+            <Route path="/onboarding" element={<OnboardingScreen onComplete={() => navigate('/auth')} />} />
+            <Route path="/auth" element={<AuthScreen onBack={() => navigate('/welcome')} onAuth={() => navigate('/home')} />} />
+
+            {/* Protected routes */}
+            <Route path="/home" element={user ? <NewHomeScreen /> : <Navigate to="/welcome" replace />} />
+            <Route path="/contacts" element={user ? <NewContactsScreen /> : <Navigate to="/welcome" replace />} />
+            <Route path="/contacts/:id" element={user ? <NewContactDetailScreen /> : <Navigate to="/welcome" replace />} />
+            <Route path="/contacts/add" element={user ? <FullAddContactScreen /> : <Navigate to="/welcome" replace />} />
+            <Route path="/contacts/:id/edit" element={user ? <FullAddContactScreen /> : <Navigate to="/welcome" replace />} />
+            <Route path="/quick-capture" element={user ? <QuickCaptureScreen /> : <Navigate to="/welcome" replace />} />
+            <Route path="/reminders" element={user ? <NewRemindersScreen /> : <Navigate to="/welcome" replace />} />
+            <Route path="/reminders/add" element={user ? <NewAddReminderScreen /> : <Navigate to="/welcome" replace />} />
+            <Route path="/reminders/add/:contactId" element={user ? <NewAddReminderScreen /> : <Navigate to="/welcome" replace />} />
+            <Route path="/profile" element={user ? <NewProfileScreen /> : <Navigate to="/welcome" replace />} />
+
+            {/* Default redirect */}
+            <Route path="/" element={user ? <Navigate to="/home" replace /> : <Navigate to="/welcome" replace />} />
+            <Route path="*" element={user ? <Navigate to="/home" replace /> : <Navigate to="/welcome" replace />} />
+          </Routes>
         </div>
         {showBottomNav && (
           <BottomTabNav
@@ -239,6 +95,14 @@ function NewApp() {
         )}
       </div>
     </div>
+  );
+}
+
+function NewApp() {
+  return (
+    <BrowserRouter>
+      <AppContent />
+    </BrowserRouter>
   );
 }
 

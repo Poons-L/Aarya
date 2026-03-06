@@ -1,14 +1,11 @@
 import { useState, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Bell, Plus, Check, Clock, Calendar, AlertCircle } from 'lucide-react';
 import { useReminders } from '../hooks/useReminders';
 import { useContacts } from '../hooks/useContacts';
 
-interface NewRemindersScreenProps {
-  onAddReminder: () => void;
-  onSelectContact: (contactId: string) => void;
-}
-
-export function NewRemindersScreen({ onAddReminder, onSelectContact }: NewRemindersScreenProps) {
+export function NewRemindersScreen() {
+  const navigate = useNavigate();
   const { reminders, updateReminder, deleteReminder } = useReminders();
   const { contacts } = useContacts();
   const [filter, setFilter] = useState<'all' | 'upcoming' | 'overdue' | 'completed'>('upcoming');
@@ -99,7 +96,7 @@ export function NewRemindersScreen({ onAddReminder, onSelectContact }: NewRemind
             </p>
           </div>
           <button
-            onClick={onAddReminder}
+            onClick={() => navigate('/reminders/add')}
             className="bg-gradient-to-r from-orange-500 to-pink-500 text-white p-3 rounded-full shadow-lg active:scale-95 transition-transform"
           >
             <Plus size={24} />
@@ -169,7 +166,7 @@ export function NewRemindersScreen({ onAddReminder, onSelectContact }: NewRemind
             </p>
             {filter === 'all' && (
               <button
-                onClick={onAddReminder}
+                onClick={() => navigate('/reminders/add')}
                 className="bg-gradient-to-r from-orange-500 to-pink-500 text-white px-6 py-2 rounded-lg font-medium active:scale-95 transition-transform"
               >
                 Create First Reminder
@@ -229,7 +226,7 @@ export function NewRemindersScreen({ onAddReminder, onSelectContact }: NewRemind
 
                         {contact && (
                           <button
-                            onClick={() => onSelectContact(contact.id)}
+                            onClick={() => navigate(`/contacts/${contact.id}`)}
                             className="flex items-center gap-1 px-2 py-0.5 bg-orange-100 text-orange-700 text-xs rounded-full active:scale-95 transition-transform"
                           >
                             {contact.name}

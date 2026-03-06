@@ -1,15 +1,16 @@
 import { useState } from 'react';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { ArrowLeft, Camera, X, Plus } from 'lucide-react';
 import { useContacts } from '../hooks/useContacts';
 
-interface FullAddContactScreenProps {
-  onBack: () => void;
-  onSave: () => void;
-  contactToEdit?: any;
-}
+export function FullAddContactScreen() {
+  const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
+  const location = useLocation();
+  const { contacts, addContact, updateContact } = useContacts();
 
-export function FullAddContactScreen({ onBack, onSave, contactToEdit }: FullAddContactScreenProps) {
-  const { addContact, updateContact } = useContacts();
+  const isEdit = location.pathname.includes('/edit');
+  const contactToEdit = isEdit && id ? contacts.find(c => c.id === id) : null;
   const [loading, setLoading] = useState(false);
   const [photoPreview, setPhotoPreview] = useState(contactToEdit?.photo_url || '');
 
@@ -70,7 +71,11 @@ export function FullAddContactScreen({ onBack, onSave, contactToEdit }: FullAddC
         await addContact(contactData);
       }
 
-      onSave();
+      if (isEdit) {
+        navigate(`/contacts/${id}`);
+      } else {
+        navigate('/contacts');
+      }
     } catch (error) {
       console.error('Error saving contact:', error);
       alert('Failed to save contact. Please try again.');
@@ -82,7 +87,7 @@ export function FullAddContactScreen({ onBack, onSave, contactToEdit }: FullAddC
   return (
     <div className="h-full bg-gradient-to-br from-slate-50 to-slate-100 flex flex-col">
       <div className="bg-white border-b border-slate-200 px-6 py-4 flex items-center justify-between">
-        <button onClick={onBack} className="text-slate-600 active:text-slate-900">
+        <button onClick={() => navigate(-1)} className="text-slate-600 active:text-slate-900">
           <ArrowLeft size={24} />
         </button>
         <h1 className="text-lg font-semibold text-slate-900">

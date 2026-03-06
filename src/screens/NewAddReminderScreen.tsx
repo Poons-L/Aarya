@@ -1,15 +1,12 @@
 import { useState } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft } from 'lucide-react';
 import { useReminders } from '../hooks/useReminders';
 import { useContacts } from '../hooks/useContacts';
 
-interface NewAddReminderScreenProps {
-  onBack: () => void;
-  onSave: () => void;
-  preselectedContactId?: string;
-}
-
-export function NewAddReminderScreen({ onBack, onSave, preselectedContactId }: NewAddReminderScreenProps) {
+export function NewAddReminderScreen() {
+  const { contactId } = useParams<{ contactId: string }>();
+  const navigate = useNavigate();
   const { addReminder } = useReminders();
   const { contacts } = useContacts();
   const [loading, setLoading] = useState(false);
@@ -21,7 +18,7 @@ export function NewAddReminderScreen({ onBack, onSave, preselectedContactId }: N
     title: '',
     description: '',
     due_date: tomorrow.toISOString().split('T')[0],
-    contact_id: preselectedContactId || '',
+    contact_id: contactId || '',
     priority: 'medium' as 'low' | 'medium' | 'high'
   });
 
@@ -38,7 +35,7 @@ export function NewAddReminderScreen({ onBack, onSave, preselectedContactId }: N
         contact_id: formData.contact_id || null,
         priority: formData.priority
       });
-      onSave();
+      navigate('/reminders');
     } catch (error) {
       console.error('Error creating reminder:', error);
       alert('Failed to create reminder. Please try again.');
@@ -50,7 +47,7 @@ export function NewAddReminderScreen({ onBack, onSave, preselectedContactId }: N
   return (
     <div className="h-full bg-gradient-to-br from-slate-50 to-slate-100 flex flex-col">
       <div className="bg-white border-b border-slate-200 px-6 py-4 flex items-center justify-between">
-        <button onClick={onBack} className="text-slate-600 active:text-slate-900">
+        <button onClick={() => navigate(-1)} className="text-slate-600 active:text-slate-900">
           <ArrowLeft size={24} />
         </button>
         <h1 className="text-lg font-semibold text-slate-900">New Reminder</h1>

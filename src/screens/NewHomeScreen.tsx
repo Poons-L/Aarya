@@ -1,14 +1,11 @@
+import { useNavigate } from 'react-router-dom';
 import { Users, Plus, Mic, Search as SearchIcon, Bell, Calendar, TrendingUp } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useContacts } from '../hooks/useContacts';
 import { useReminders } from '../hooks/useReminders';
 
-interface NewHomeScreenProps {
-  onNavigate: (screen: string) => void;
-  onSelectContact: (contactId: string) => void;
-}
-
-export function NewHomeScreen({ onNavigate, onSelectContact }: NewHomeScreenProps) {
+export function NewHomeScreen() {
+  const navigate = useNavigate();
   const { profile } = useAuth();
   const { contacts } = useContacts();
   const { reminders } = useReminders();
@@ -66,7 +63,7 @@ export function NewHomeScreen({ onNavigate, onSelectContact }: NewHomeScreenProp
             </div>
             {profile?.avatar_url && (
               <button
-                onClick={() => onNavigate('profile')}
+                onClick={() => navigate('/profile')}
                 className="w-12 h-12 rounded-full overflow-hidden ring-2 ring-orange-400"
               >
                 <img
@@ -112,7 +109,7 @@ export function NewHomeScreen({ onNavigate, onSelectContact }: NewHomeScreenProp
             <h2 className="text-sm font-semibold text-slate-700 mb-3">Quick Actions</h2>
             <div className="grid grid-cols-2 gap-3">
               <button
-                onClick={() => onNavigate('add-contact')}
+                onClick={() => navigate('/contacts/add')}
                 className="bg-gradient-to-br from-orange-500 to-pink-500 text-white p-4 rounded-xl shadow-md active:scale-95 transition-transform"
               >
                 <div className="flex items-center gap-3">
@@ -127,7 +124,7 @@ export function NewHomeScreen({ onNavigate, onSelectContact }: NewHomeScreenProp
               </button>
 
               <button
-                onClick={() => onNavigate('quick-capture')}
+                onClick={() => navigate('/quick-capture')}
                 className="bg-gradient-to-br from-amber-500 to-orange-500 text-white p-4 rounded-xl shadow-md active:scale-95 transition-transform"
               >
                 <div className="flex items-center gap-3">
@@ -148,7 +145,7 @@ export function NewHomeScreen({ onNavigate, onSelectContact }: NewHomeScreenProp
               <div className="flex items-center justify-between mb-3">
                 <h2 className="text-sm font-semibold text-slate-700">Upcoming Follow-ups</h2>
                 <button
-                  onClick={() => onNavigate('reminders')}
+                  onClick={() => navigate('/reminders')}
                   className="text-xs text-orange-600 font-medium"
                 >
                   View All
@@ -192,7 +189,7 @@ export function NewHomeScreen({ onNavigate, onSelectContact }: NewHomeScreenProp
               <div className="flex items-center justify-between mb-3">
                 <h2 className="text-sm font-semibold text-slate-700">Recent Contacts</h2>
                 <button
-                  onClick={() => onNavigate('contacts')}
+                  onClick={() => navigate('/contacts')}
                   className="text-xs text-orange-600 font-medium"
                 >
                   View All
@@ -202,7 +199,7 @@ export function NewHomeScreen({ onNavigate, onSelectContact }: NewHomeScreenProp
                 {recentContacts.map(contact => (
                   <button
                     key={contact.id}
-                    onClick={() => onSelectContact(contact.id)}
+                    onClick={() => navigate(`/contacts/${contact.id}`)}
                     className="w-full bg-white rounded-xl p-3 shadow-sm border border-slate-200 active:scale-98 transition-transform"
                   >
                     <div className="flex items-center gap-3">
@@ -246,7 +243,7 @@ export function NewHomeScreen({ onNavigate, onSelectContact }: NewHomeScreenProp
                 Start building your network by adding your first contact
               </p>
               <button
-                onClick={() => onNavigate('add-contact')}
+                onClick={() => navigate('/contacts/add')}
                 className="bg-gradient-to-r from-orange-500 to-pink-500 text-white px-6 py-2 rounded-lg font-medium active:scale-95 transition-transform"
               >
                 Add First Contact

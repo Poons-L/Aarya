@@ -1,23 +1,14 @@
 import { useState } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Mail, Phone, Linkedin, MapPin, Calendar, Tag, CreditCard as Edit2, MessageCircle, Sparkles, Plus, Clock, Send, ExternalLink, CalendarPlus, Download, User, ChevronDown } from 'lucide-react';
 import { useContacts } from '../hooks/useContacts';
 import { downloadVCard, generateHubSpotCSV, generateSalesforceCSV, downloadCSV, createMailtoLink, createCalendarEvent } from '../utils/contactExport';
 
-interface NewContactDetailScreenProps {
-  contactId: string;
-  onBack: () => void;
-  onEdit: () => void;
-  onAddReminder: () => void;
-}
-
-export function NewContactDetailScreen({
-  contactId,
-  onBack,
-  onEdit,
-  onAddReminder,
-}: NewContactDetailScreenProps) {
+export function NewContactDetailScreen() {
+  const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
   const { contacts, updateContact } = useContacts();
-  const contact = contacts.find(c => c.id === contactId);
+  const contact = contacts.find(c => c.id === id);
   const [showAIStarters, setShowAIStarters] = useState(false);
   const [generatingAI, setGeneratingAI] = useState(false);
   const [aiStarters, setAIStarters] = useState<string[]>([]);
@@ -26,7 +17,7 @@ export function NewContactDetailScreen({
   const [showCRMExport, setShowCRMExport] = useState(false);
 
   if (!contact) {
-    onBack();
+    navigate('/contacts');
     return null;
   }
 
@@ -173,11 +164,11 @@ Provide 3 specific, personalized conversation starters that reference their work
   return (
     <div className="h-full bg-gradient-to-br from-slate-50 to-slate-100 flex flex-col">
       <div className="bg-white border-b border-slate-200 px-6 py-4 flex items-center justify-between">
-        <button onClick={onBack} className="text-slate-600 active:text-slate-900">
+        <button onClick={() => navigate('/contacts')} className="text-slate-600 active:text-slate-900">
           <ArrowLeft size={24} />
         </button>
         <h1 className="text-lg font-semibold text-slate-900">Contact Details</h1>
-        <button onClick={onEdit} className="text-orange-600 active:text-orange-800">
+        <button onClick={() => navigate(`/contacts/${id}/edit`)} className="text-orange-600 active:text-orange-800">
           <Edit2 size={20} />
         </button>
       </div>
@@ -488,7 +479,7 @@ Provide 3 specific, personalized conversation starters that reference their work
           </div>
 
           <button
-            onClick={onAddReminder}
+            onClick={() => navigate(`/reminders/add/${id}`)}
             className="w-full bg-gradient-to-r from-amber-500 to-orange-500 text-white p-4 rounded-xl shadow-md active:scale-98 transition-transform"
           >
             <div className="flex items-center justify-center gap-2">
