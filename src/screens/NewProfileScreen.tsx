@@ -2,7 +2,11 @@ import { useState } from 'react';
 import { User, Mail, Camera, LogOut, Info, Bell, Shield, ChevronRight } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 
-export function NewProfileScreen() {
+interface NewProfileScreenProps {
+  onNavigate: (screen: string) => void;
+}
+
+export function NewProfileScreen({ onNavigate }: NewProfileScreenProps) {
   const { profile, user, updateProfile, signOut } = useAuth();
   const [editing, setEditing] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -41,7 +45,7 @@ export function NewProfileScreen() {
   const handleSignOut = async () => {
     if (confirm('Are you sure you want to sign out?')) {
       await signOut();
-      onNavigate({ name: 'welcome' });
+      onNavigate('welcome');
     }
   };
 

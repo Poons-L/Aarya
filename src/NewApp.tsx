@@ -192,7 +192,7 @@ function NewApp() {
     screenContent = <NewRemindersScreen />;
   } else if (navState.screen === 'addReminder') {
     screenContent = <NewAddReminderScreen
-      contactId={navState.contactId}
+      contactId={navState.contactId ?? undefined}
       onBack={() => {
         console.log('AddReminder: onBack clicked');
         if (history.length === 0) {
@@ -210,7 +210,15 @@ function NewApp() {
       }}
     />;
   } else if (navState.screen === 'profile') {
-    screenContent = <NewProfileScreen />;
+    screenContent = <NewProfileScreen
+      onNavigate={(screen: string) => {
+        console.log('Profile: onNavigate called with', screen);
+        if (screen === 'welcome') {
+          setNavState({ screen: 'welcome', contactId: null });
+          setHistory([]);
+        }
+      }}
+    />;
   } else {
     screenContent = <NewHomeScreen />;
   }
