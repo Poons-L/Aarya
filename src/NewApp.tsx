@@ -114,7 +114,9 @@ function NewApp() {
   } else if (navState.screen === 'contacts') {
     screenContent = <NewContactsScreen
       onViewContact={(contactId) => {
-        console.log('Contacts: onViewContact clicked with', contactId);
+        console.log('Contacts: onViewContact clicked with contactId:', contactId);
+        console.log('Setting navState to contactDetail with contactId:', contactId);
+        setHistory(prev => [...prev, navState]);
         setNavState({ screen: 'contactDetail', contactId });
       }}
       onAddContact={() => {
@@ -267,12 +269,7 @@ function NewApp() {
   }
 
   return (
-    <div
-      className="min-h-screen bg-slate-50 flex justify-center"
-      onClick={(e) => {
-        console.log('Root div click:', e.target, e.currentTarget);
-      }}
-    >
+    <div className="min-h-screen bg-slate-50 flex justify-center">
       <div className="w-full max-w-[430px] min-h-screen bg-white shadow-xl flex flex-col relative z-0">
         <div className="flex-1 overflow-hidden relative">
           {screenContent}
