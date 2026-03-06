@@ -99,7 +99,18 @@ function NewApp() {
       }}
     />;
   } else if (navState.screen === 'home') {
-    screenContent = <NewHomeScreen />;
+    screenContent = <NewHomeScreen
+      onNavigate={(screen: string) => {
+        console.log('HomeScreen: onNavigate called with', screen);
+        setHistory(prev => [...prev, navState]);
+        setNavState({ screen: screen as any, contactId: null });
+      }}
+      onViewContact={(contactId: string) => {
+        console.log('HomeScreen: onViewContact called with', contactId);
+        setHistory(prev => [...prev, navState]);
+        setNavState({ screen: 'contactDetail', contactId });
+      }}
+    />;
   } else if (navState.screen === 'contacts') {
     screenContent = <NewContactsScreen
       onViewContact={(contactId) => {
@@ -124,6 +135,16 @@ function NewApp() {
           setHistory(newHistory);
           setNavState(previousState);
         }
+      }}
+      onEditContact={(contactId: string) => {
+        console.log('ContactDetail: onEditContact called with', contactId);
+        setHistory(prev => [...prev, navState]);
+        setNavState({ screen: 'editContact', contactId });
+      }}
+      onAddReminder={(contactId: string) => {
+        console.log('ContactDetail: onAddReminder called with', contactId);
+        setHistory(prev => [...prev, navState]);
+        setNavState({ screen: 'addReminder', contactId });
       }}
     />;
   } else if (navState.screen === 'addContact') {
@@ -189,7 +210,18 @@ function NewApp() {
       }}
     />;
   } else if (navState.screen === 'reminders') {
-    screenContent = <NewRemindersScreen />;
+    screenContent = <NewRemindersScreen
+      onNavigate={(screen: string) => {
+        console.log('RemindersScreen: onNavigate called with', screen);
+        setHistory(prev => [...prev, navState]);
+        setNavState({ screen: screen as any, contactId: null });
+      }}
+      onViewContact={(contactId: string) => {
+        console.log('RemindersScreen: onViewContact called with', contactId);
+        setHistory(prev => [...prev, navState]);
+        setNavState({ screen: 'contactDetail', contactId });
+      }}
+    />;
   } else if (navState.screen === 'addReminder') {
     screenContent = <NewAddReminderScreen
       contactId={navState.contactId ?? undefined}
@@ -220,7 +252,18 @@ function NewApp() {
       }}
     />;
   } else {
-    screenContent = <NewHomeScreen />;
+    screenContent = <NewHomeScreen
+      onNavigate={(screen: string) => {
+        console.log('HomeScreen (fallback): onNavigate called with', screen);
+        setHistory(prev => [...prev, navState]);
+        setNavState({ screen: screen as any, contactId: null });
+      }}
+      onViewContact={(contactId: string) => {
+        console.log('HomeScreen (fallback): onViewContact called with', contactId);
+        setHistory(prev => [...prev, navState]);
+        setNavState({ screen: 'contactDetail', contactId });
+      }}
+    />;
   }
 
   return (

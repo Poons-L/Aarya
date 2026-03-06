@@ -2,15 +2,15 @@ import { useState } from 'react';
 import { ArrowLeft, Mail, Phone, Linkedin, MapPin, Calendar, Tag, CreditCard as Edit2, MessageCircle, Sparkles, Plus, Clock, Send, ExternalLink, CalendarPlus, Download, User, ChevronDown } from 'lucide-react';
 import { useContacts } from '../hooks/useContacts';
 import { downloadVCard, generateHubSpotCSV, generateSalesforceCSV, downloadCSV, createMailtoLink, createCalendarEvent } from '../utils/contactExport';
-import { useNavigation } from '../contexts/NavigationContext';
 
 interface NewContactDetailScreenProps {
   contactId: string;
   onBack: () => void;
+  onEditContact: (contactId: string) => void;
+  onAddReminder: (contactId: string) => void;
 }
 
-export function NewContactDetailScreen({ contactId, onBack }: NewContactDetailScreenProps) {
-  const { editContact, addReminder } = useNavigation();
+export function NewContactDetailScreen({ contactId, onBack, onEditContact, onAddReminder }: NewContactDetailScreenProps) {
   const { contacts, updateContact } = useContacts();
   const contact = contacts.find(c => c.id === contactId);
   const [showAIStarters, setShowAIStarters] = useState(false);
@@ -172,7 +172,7 @@ Provide 3 specific, personalized conversation starters that reference their work
           <ArrowLeft size={24} />
         </button>
         <h1 className="text-lg font-semibold text-slate-900">Contact Details</h1>
-        <button onClick={() => editContact(contactId)} className="text-orange-600 active:text-orange-800">
+        <button onClick={() => onEditContact(contactId)} className="text-orange-600 active:text-orange-800">
           <Edit2 size={20} />
         </button>
       </div>
@@ -483,7 +483,7 @@ Provide 3 specific, personalized conversation starters that reference their work
           </div>
 
           <button
-            onClick={() => addReminder(contactId)}
+            onClick={() => onAddReminder(contactId)}
             className="w-full bg-gradient-to-r from-amber-500 to-orange-500 text-white p-4 rounded-xl shadow-md active:scale-98 transition-transform"
           >
             <div className="flex items-center justify-center gap-2">

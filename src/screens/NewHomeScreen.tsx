@@ -2,10 +2,13 @@ import { Users, Plus, Mic, Search as SearchIcon, Bell, Calendar, TrendingUp } fr
 import { useAuth } from '../contexts/AuthContext';
 import { useContacts } from '../hooks/useContacts';
 import { useReminders } from '../hooks/useReminders';
-import { useNavigation } from '../contexts/NavigationContext';
 
-export function NewHomeScreen() {
-  const { navigate, viewContact } = useNavigation();
+interface NewHomeScreenProps {
+  onNavigate: (screen: string) => void;
+  onViewContact: (contactId: string) => void;
+}
+
+export function NewHomeScreen({ onNavigate, onViewContact }: NewHomeScreenProps) {
   const { profile } = useAuth();
   const { contacts } = useContacts();
   const { reminders } = useReminders();
@@ -63,7 +66,7 @@ export function NewHomeScreen() {
             </div>
             {profile?.avatar_url && (
               <button
-                onClick={() => navigate({ name: 'profile' })}
+                onClick={() => onNavigate('profile')}
                 className="w-12 h-12 rounded-full overflow-hidden ring-2 ring-orange-400"
               >
                 <img
@@ -109,7 +112,7 @@ export function NewHomeScreen() {
             <h2 className="text-sm font-semibold text-slate-700 mb-3">Quick Actions</h2>
             <div className="grid grid-cols-2 gap-3">
               <button
-                onClick={() => navigate({ name: 'addContact' })}
+                onClick={() => onNavigate('addContact')}
                 className="bg-gradient-to-br from-orange-500 to-pink-500 text-white p-4 rounded-xl shadow-md active:scale-95 transition-transform"
               >
                 <div className="flex items-center gap-3">
@@ -124,7 +127,7 @@ export function NewHomeScreen() {
               </button>
 
               <button
-                onClick={() => navigate({ name: 'quickCapture' })}
+                onClick={() => onNavigate('quickCapture')}
                 className="bg-gradient-to-br from-amber-500 to-orange-500 text-white p-4 rounded-xl shadow-md active:scale-95 transition-transform"
               >
                 <div className="flex items-center gap-3">
@@ -145,7 +148,7 @@ export function NewHomeScreen() {
               <div className="flex items-center justify-between mb-3">
                 <h2 className="text-sm font-semibold text-slate-700">Upcoming Follow-ups</h2>
                 <button
-                  onClick={() => navigate({ name: 'reminders' })}
+                  onClick={() => onNavigate('reminders')}
                   className="text-xs text-orange-600 font-medium"
                 >
                   View All
@@ -189,7 +192,7 @@ export function NewHomeScreen() {
               <div className="flex items-center justify-between mb-3">
                 <h2 className="text-sm font-semibold text-slate-700">Recent Contacts</h2>
                 <button
-                  onClick={() => navigate({ name: 'contacts' })}
+                  onClick={() => onNavigate('contacts')}
                   className="text-xs text-orange-600 font-medium"
                 >
                   View All
@@ -199,7 +202,7 @@ export function NewHomeScreen() {
                 {recentContacts.map(contact => (
                   <button
                     key={contact.id}
-                    onClick={() => viewContact(contact.id)}
+                    onClick={() => onViewContact(contact.id)}
                     className="w-full bg-white rounded-xl p-3 shadow-sm border border-slate-200 active:scale-98 transition-transform"
                   >
                     <div className="flex items-center gap-3">
@@ -243,7 +246,7 @@ export function NewHomeScreen() {
                 Start building your network by adding your first contact
               </p>
               <button
-                onClick={() => navigate({ name: 'addContact' })}
+                onClick={() => onNavigate('addContact')}
                 className="bg-gradient-to-r from-orange-500 to-pink-500 text-white px-6 py-2 rounded-lg font-medium active:scale-95 transition-transform"
               >
                 Add First Contact
