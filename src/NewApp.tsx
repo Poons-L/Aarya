@@ -22,36 +22,28 @@ interface NavState {
 }
 
 function NewApp() {
-  const { user, loading: authLoading } = useAuth();
-  const { reminders } = useReminders();
   const [navState, setNavState] = useState<NavState>({ screen: 'welcome', contactId: null });
   const [history, setHistory] = useState<NavState[]>([]);
+
+  const { user, loading: authLoading } = useAuth();
+  const { reminders } = useReminders();
 
   const overdueCount = reminders.filter(
     r => !r.completed && new Date(r.due_date) < new Date()
   ).length;
 
-  const navigate = (newNavState: NavState) => {
-    console.log('Navigate called:', newNavState);
-    setHistory(prev => [...prev, navState]);
-    setNavState(newNavState);
-  };
-
-  const goBack = () => {
-    console.log('GoBack called, history length:', history.length);
-    if (history.length === 0) return;
-    const newHistory = [...history];
-    const previousState = newHistory.pop()!;
-    setHistory(newHistory);
-    setNavState(previousState);
-  };
+  useEffect(() => {
+    console.log('navState changed:', navState);
+  }, [navState]);
 
   useEffect(() => {
     if (!user && navState.screen !== 'welcome' && navState.screen !== 'onboarding' && navState.screen !== 'auth') {
       setNavState({ screen: 'welcome', contactId: null });
+      setHistory([]);
     }
     if (user && (navState.screen === 'welcome' || navState.screen === 'onboarding' || navState.screen === 'auth')) {
       setNavState({ screen: 'home', contactId: null });
+      setHistory([]);
     }
   }, [user, navState.screen]);
 
@@ -81,59 +73,162 @@ function NewApp() {
     navState.screen === 'profile'
   );
 
-  const handleTabChange = (tab: Tab) => {
-    navigate({ screen: tab, contactId: null });
-  };
+  console.log('Rendering NewApp with navState:', navState);
 
-  const renderScreen = () => {
-    switch (navState.screen) {
-      case 'welcome':
-        return <WelcomeScreen onGetStarted={() => navigate({ screen: 'onboarding', contactId: null })} />;
-      case 'onboarding':
-        return <OnboardingScreen onComplete={() => navigate({ screen: 'auth', contactId: null })} />;
-      case 'auth':
-        return <AuthScreen onBack={() => navigate({ screen: 'welcome', contactId: null })} onAuth={() => navigate({ screen: 'home', contactId: null })} />;
-      case 'home':
-        return <NewHomeScreen />;
-      case 'contacts':
-        return (
-          <NewContactsScreen
-            onViewContact={(contactId) => {
-              console.log('NewApp: onViewContact called with', contactId);
-              setNavState({ screen: 'contactDetail', contactId });
-            }}
-            onAddContact={() => navigate({ screen: 'addContact', contactId: null })}
-          />
-        );
-      case 'contactDetail':
-        return <NewContactDetailScreen contactId={navState.contactId!} onBack={goBack} />;
-      case 'addContact':
-        return <FullAddContactScreen onBack={goBack} onSave={() => navigate({ screen: 'contacts', contactId: null })} />;
-      case 'editContact':
-        return <FullAddContactScreen contactId={navState.contactId!} onBack={goBack} onSave={goBack} />;
-      case 'quickCapture':
-        return <QuickCaptureScreen onBack={goBack} onComplete={() => navigate({ screen: 'home', contactId: null })} />;
-      case 'reminders':
-        return <NewRemindersScreen />;
-      case 'addReminder':
-        return <NewAddReminderScreen contactId={navState.contactId} onBack={goBack} onSave={() => navigate({ screen: 'reminders', contactId: null })} />;
-      case 'profile':
-        return <NewProfileScreen />;
-      default:
-        return <NewHomeScreen />;
-    }
-  };
+  let screenContent = null;
+
+  if (navState.screen === 'welcome') {
+    screenContent = <WelcomeScreen onGetStarted={() => {
+      console.log('Welcome: onGetStarted clicked');
+      setNavState({ screen: 'onboarding', contactId: null });
+    }} />;
+  } else if (navState.screen === 'onboarding') {
+    screenContent = <OnboardingScreen onComplete={() => {
+      console.log('Onboarding: onComplete clicked');
+      setNavState({ screen: 'auth', contactId: null });
+    }} />;
+  } else if (navState.screen === 'auth') {
+    screenContent = <AuthScreen
+      onBack={() => {
+        console.log('Auth: onBack clicked');
+        setNavState({ screen: 'welcome', contactId: null });
+      }}
+      onAuth={() => {
+        console.log('Auth: onAuth success');
+        setNavState({ screen: 'home', contactId: null });
+      }}
+    />;
+  } else if (navState.screen === 'home') {
+    screenContent = <NewHomeScreen />;
+  } else if (navState.screen === 'contacts') {
+    screenContent = <NewContactsScreen
+      onViewContact={(contactId) => {
+        console.log('Contacts: onViewContact clicked with', contactId);
+        setNavState({ screen: 'contactDetail', contactId });
+      }}
+      onAddContact={() => {
+        console.log('Contacts: onAddContact clicked');
+        setNavState({ screen: 'addContact', contactId: null });
+      }}
+    />;
+  } else if (navState.screen === 'contactDetail') {
+    screenContent = <NewContactDetailScreen
+      contactId={navState.contactId!}
+      onBack={() => {
+        console.log('ContactDetail: onBack clicked');
+        if (history.length === 0) {
+          setNavState({ screen: 'contacts', contactId: null });
+        } else {
+          const newHistory = [...history];
+          const previousState = newHistory.pop()!;
+          setHistory(newHistory);
+          setNavState(previousState);
+        }
+      }}
+    />;
+  } else if (navState.screen === 'addContact') {
+    screenContent = <FullAddContactScreen
+      onBack={() => {
+        console.log('AddContact: onBack clicked');
+        if (history.length === 0) {
+          setNavState({ screen: 'contacts', contactId: null });
+        } else {
+          const newHistory = [...history];
+          const previousState = newHistory.pop()!;
+          setHistory(newHistory);
+          setNavState(previousState);
+        }
+      }}
+      onSave={() => {
+        console.log('AddContact: onSave clicked');
+        setNavState({ screen: 'contacts', contactId: null });
+      }}
+    />;
+  } else if (navState.screen === 'editContact') {
+    screenContent = <FullAddContactScreen
+      contactId={navState.contactId!}
+      onBack={() => {
+        console.log('EditContact: onBack clicked');
+        if (history.length === 0) {
+          setNavState({ screen: 'contacts', contactId: null });
+        } else {
+          const newHistory = [...history];
+          const previousState = newHistory.pop()!;
+          setHistory(newHistory);
+          setNavState(previousState);
+        }
+      }}
+      onSave={() => {
+        console.log('EditContact: onSave clicked');
+        if (history.length === 0) {
+          setNavState({ screen: 'contacts', contactId: null });
+        } else {
+          const newHistory = [...history];
+          const previousState = newHistory.pop()!;
+          setHistory(newHistory);
+          setNavState(previousState);
+        }
+      }}
+    />;
+  } else if (navState.screen === 'quickCapture') {
+    screenContent = <QuickCaptureScreen
+      onBack={() => {
+        console.log('QuickCapture: onBack clicked');
+        if (history.length === 0) {
+          setNavState({ screen: 'home', contactId: null });
+        } else {
+          const newHistory = [...history];
+          const previousState = newHistory.pop()!;
+          setHistory(newHistory);
+          setNavState(previousState);
+        }
+      }}
+      onComplete={() => {
+        console.log('QuickCapture: onComplete clicked');
+        setNavState({ screen: 'home', contactId: null });
+      }}
+    />;
+  } else if (navState.screen === 'reminders') {
+    screenContent = <NewRemindersScreen />;
+  } else if (navState.screen === 'addReminder') {
+    screenContent = <NewAddReminderScreen
+      contactId={navState.contactId}
+      onBack={() => {
+        console.log('AddReminder: onBack clicked');
+        if (history.length === 0) {
+          setNavState({ screen: 'reminders', contactId: null });
+        } else {
+          const newHistory = [...history];
+          const previousState = newHistory.pop()!;
+          setHistory(newHistory);
+          setNavState(previousState);
+        }
+      }}
+      onSave={() => {
+        console.log('AddReminder: onSave clicked');
+        setNavState({ screen: 'reminders', contactId: null });
+      }}
+    />;
+  } else if (navState.screen === 'profile') {
+    screenContent = <NewProfileScreen />;
+  } else {
+    screenContent = <NewHomeScreen />;
+  }
 
   return (
     <div className="min-h-screen bg-slate-50 flex justify-center">
       <div className="w-full max-w-[430px] min-h-screen bg-white shadow-xl flex flex-col">
         <div className="flex-1 overflow-hidden">
-          {renderScreen()}
+          {screenContent}
         </div>
         {showBottomNav && (
           <BottomTabNav
             activeTab={activeTab}
-            onTabChange={handleTabChange}
+            onTabChange={(tab: Tab) => {
+              console.log('BottomNav: tab changed to', tab);
+              setHistory(prev => [...prev, navState]);
+              setNavState({ screen: tab, contactId: null });
+            }}
             overdueCount={overdueCount}
           />
         )}
