@@ -186,9 +186,10 @@ export function NewContactsScreen({ onSelectContact, onAddContact }: NewContacts
               <div
                 key={contact.id}
                 onClick={() => onSelectContact(contact.id)}
-                className="w-full bg-white rounded-xl p-4 shadow-sm border border-slate-200 active:scale-98 transition-transform cursor-pointer"
+                style={{ cursor: 'pointer' }}
+                className="w-full bg-white rounded-xl p-4 shadow-sm border border-slate-200 active:scale-98 transition-transform"
               >
-                <div className="flex items-center gap-3 pointer-events-none">
+                <div className="flex items-center gap-3">
                   <div className="w-14 h-14 rounded-full bg-gradient-to-br from-orange-400 to-pink-500 flex items-center justify-center text-white font-semibold text-lg flex-shrink-0">
                     {contact.photo_url ? (
                       <img

@@ -38,6 +38,7 @@ function NewApp() {
   const [selectedContactId, setSelectedContactId] = useState<string | null>(null);
   const [contactToEdit, setContactToEdit] = useState<any>(null);
   const [preselectedContactId, setPreselectedContactId] = useState<string | null>(null);
+  const [viewingContactId, setViewingContactId] = useState<string | null>(null);
 
   useEffect(() => {
     if (!authLoading) {
@@ -68,6 +69,7 @@ function NewApp() {
 
   const handleTabChange = (tab: Tab) => {
     setActiveTab(tab);
+    setViewingContactId(null);
     switch (tab) {
       case 'home':
         navigate('home');
@@ -116,12 +118,25 @@ function NewApp() {
         );
 
       case 'contacts':
+        if (viewingContactId) {
+          return (
+            <NewContactDetailScreen
+              contactId={viewingContactId}
+              onBack={() => setViewingContactId(null)}
+              onEdit={() => {
+                setContactToEdit(viewingContactId);
+                navigate('edit-contact');
+              }}
+              onAddReminder={() => {
+                setPreselectedContactId(viewingContactId);
+                navigate('add-reminder');
+              }}
+            />
+          );
+        }
         return (
           <NewContactsScreen
-            onSelectContact={(contactId) => {
-              setSelectedContactId(contactId);
-              navigate('contact-detail');
-            }}
+            onSelectContact={setViewingContactId}
             onAddContact={() => {
               setContactToEdit(null);
               navigate('add-contact');
