@@ -115,7 +115,9 @@ export function ContactSuggestion({ contactInfo, onAccept, onReject }: ContactSu
           <>
             <button
               type="button"
-              onClick={() => {
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
                 onAccept(editedInfo);
                 setIsEditing(false);
               }}
@@ -126,7 +128,9 @@ export function ContactSuggestion({ contactInfo, onAccept, onReject }: ContactSu
             </button>
             <button
               type="button"
-              onClick={() => {
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
                 setIsEditing(false);
                 setEditedInfo(contactInfo);
               }}
@@ -139,7 +143,11 @@ export function ContactSuggestion({ contactInfo, onAccept, onReject }: ContactSu
           <>
             <button
               type="button"
-              onClick={() => setIsEditing(true)}
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                setIsEditing(true);
+              }}
               className="flex-1 bg-gradient-to-r from-cyan-500 to-blue-600 text-white font-bold py-2.5 px-4 rounded-xl shadow-md active:scale-95 transition-transform flex items-center justify-center gap-2"
             >
               <Check size={18} />
@@ -147,7 +155,11 @@ export function ContactSuggestion({ contactInfo, onAccept, onReject }: ContactSu
             </button>
             <button
               type="button"
-              onClick={onReject}
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                onReject();
+              }}
               className="px-4 py-2.5 bg-white border-2 border-slate-200 rounded-xl font-medium text-slate-700 active:bg-slate-50 transition-colors flex items-center justify-center"
             >
               <X size={18} />

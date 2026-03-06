@@ -99,7 +99,11 @@ export function NewRemindersScreen({ onNavigate, onViewContact }: NewRemindersSc
             </p>
           </div>
           <button
-            onClick={() => onNavigate('addReminder')}
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              onNavigate('addReminder');
+            }}
             className="bg-gradient-to-r from-orange-500 to-pink-500 text-white p-3 rounded-full shadow-lg active:scale-95 transition-transform"
           >
             <Plus size={24} />
@@ -169,7 +173,11 @@ export function NewRemindersScreen({ onNavigate, onViewContact }: NewRemindersSc
             </p>
             {filter === 'all' && (
               <button
-                onClick={() => onNavigate('addReminder')}
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  onNavigate('addReminder');
+                }}
                 className="bg-gradient-to-r from-orange-500 to-pink-500 text-white px-6 py-2 rounded-lg font-medium active:scale-95 transition-transform"
               >
                 Create First Reminder
@@ -196,7 +204,11 @@ export function NewRemindersScreen({ onNavigate, onViewContact }: NewRemindersSc
                 >
                   <div className="flex items-start gap-3">
                     <button
-                      onClick={() => markComplete(reminder.id, !reminder.completed)}
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        markComplete(reminder.id, !reminder.completed);
+                      }}
                       className={`mt-1 flex-shrink-0 w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all ${
                         reminder.completed
                           ? 'bg-emerald-500 border-emerald-500'
@@ -229,7 +241,11 @@ export function NewRemindersScreen({ onNavigate, onViewContact }: NewRemindersSc
 
                         {contact && (
                           <button
-                            onClick={() => onViewContact(contact.id)}
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              onViewContact(contact.id);
+                            }}
                             className="flex items-center gap-1 px-2 py-0.5 bg-orange-100 text-orange-700 text-xs rounded-full active:scale-95 transition-transform"
                           >
                             {contact.name}
@@ -251,7 +267,11 @@ export function NewRemindersScreen({ onNavigate, onViewContact }: NewRemindersSc
                         <div className="mt-3">
                           {!showActions ? (
                             <button
-                              onClick={() => setShowActions(true)}
+                              onClick={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                setShowActions(true);
+                              }}
                               className="text-xs text-orange-600 font-medium"
                             >
                               Actions
@@ -259,7 +279,9 @@ export function NewRemindersScreen({ onNavigate, onViewContact }: NewRemindersSc
                           ) : (
                             <div className="flex gap-2">
                               <button
-                                onClick={() => {
+                                onClick={(e) => {
+                                  e.preventDefault();
+                                  e.stopPropagation();
                                   snoozeReminder(reminder.id, 1);
                                   setShowActions(false);
                                 }}
@@ -268,7 +290,9 @@ export function NewRemindersScreen({ onNavigate, onViewContact }: NewRemindersSc
                                 +1 day
                               </button>
                               <button
-                                onClick={() => {
+                                onClick={(e) => {
+                                  e.preventDefault();
+                                  e.stopPropagation();
                                   snoozeReminder(reminder.id, 7);
                                   setShowActions(false);
                                 }}
@@ -277,7 +301,11 @@ export function NewRemindersScreen({ onNavigate, onViewContact }: NewRemindersSc
                                 +1 week
                               </button>
                               <button
-                                onClick={() => setShowActions(false)}
+                                onClick={(e) => {
+                                  e.preventDefault();
+                                  e.stopPropagation();
+                                  setShowActions(false);
+                                }}
                                 className="px-3 py-1 bg-slate-100 text-slate-600 text-xs rounded-lg font-medium"
                               >
                                 Cancel
