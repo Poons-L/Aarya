@@ -2,13 +2,10 @@ import { useState, useMemo } from 'react';
 import { Bell, Plus, Check, Clock, Calendar, AlertCircle } from 'lucide-react';
 import { useReminders } from '../hooks/useReminders';
 import { useContacts } from '../hooks/useContacts';
+import { useNavigation } from '../contexts/NavigationContext';
 
-interface NewRemindersScreenProps {
-  onNavigate: (screen: any) => void;
-  dispatch: React.Dispatch<any>;
-}
-
-export function NewRemindersScreen({ onNavigate, dispatch }: NewRemindersScreenProps) {
+export function NewRemindersScreen() {
+  const { navigate, viewContact } = useNavigation();
   const { reminders, updateReminder, deleteReminder } = useReminders();
   const { contacts } = useContacts();
   const [filter, setFilter] = useState<'all' | 'upcoming' | 'overdue' | 'completed'>('upcoming');
@@ -99,7 +96,7 @@ export function NewRemindersScreen({ onNavigate, dispatch }: NewRemindersScreenP
             </p>
           </div>
           <button
-            onClick={() => onNavigate({ name: 'addReminder' })}
+            onClick={() => navigate({ name: 'addReminder' })}
             className="bg-gradient-to-r from-orange-500 to-pink-500 text-white p-3 rounded-full shadow-lg active:scale-95 transition-transform"
           >
             <Plus size={24} />
@@ -169,7 +166,7 @@ export function NewRemindersScreen({ onNavigate, dispatch }: NewRemindersScreenP
             </p>
             {filter === 'all' && (
               <button
-                onClick={() => onNavigate({ name: 'addReminder' })}
+                onClick={() => navigate({ name: 'addReminder' })}
                 className="bg-gradient-to-r from-orange-500 to-pink-500 text-white px-6 py-2 rounded-lg font-medium active:scale-95 transition-transform"
               >
                 Create First Reminder
@@ -229,7 +226,7 @@ export function NewRemindersScreen({ onNavigate, dispatch }: NewRemindersScreenP
 
                         {contact && (
                           <button
-                            onClick={() => dispatch({ type: 'VIEW_CONTACT', contactId: contact.id })}
+                            onClick={() => viewContact(contact.id)}
                             className="flex items-center gap-1 px-2 py-0.5 bg-orange-100 text-orange-700 text-xs rounded-full active:scale-95 transition-transform"
                           >
                             {contact.name}

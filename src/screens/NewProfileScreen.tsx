@@ -2,11 +2,7 @@ import { useState } from 'react';
 import { User, Mail, Camera, LogOut, Info, Bell, Shield, ChevronRight } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 
-interface NewProfileScreenProps {
-  onNavigate: (screen: any) => void;
-}
-
-export function NewProfileScreen({ onNavigate }: NewProfileScreenProps) {
+export function NewProfileScreen() {
   const { profile, user, updateProfile, signOut } = useAuth();
   const [editing, setEditing] = useState(false);
   const [loading, setLoading] = useState(false);

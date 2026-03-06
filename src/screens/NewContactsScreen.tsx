@@ -1,13 +1,10 @@
 import { useState, useMemo } from 'react';
 import { Search, Filter, Users, Plus, X, ChevronDown } from 'lucide-react';
 import { useContacts } from '../hooks/useContacts';
+import { useNavigation } from '../contexts/NavigationContext';
 
-interface NewContactsScreenProps {
-  onNavigate: (screen: any) => void;
-  dispatch: React.Dispatch<any>;
-}
-
-export function NewContactsScreen({ onNavigate, dispatch }: NewContactsScreenProps) {
+export function NewContactsScreen() {
+  const { navigate, viewContact } = useNavigation();
   const { contacts } = useContacts();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedTag, setSelectedTag] = useState<string>('');
@@ -74,7 +71,7 @@ export function NewContactsScreen({ onNavigate, dispatch }: NewContactsScreenPro
             </p>
           </div>
           <button
-            onClick={() => onNavigate({ name: 'addContact' })}
+            onClick={() => navigate({ name: 'addContact' })}
             className="bg-gradient-to-r from-orange-500 to-pink-500 text-white p-3 rounded-full shadow-lg active:scale-95 transition-transform"
           >
             <Plus size={24} />
@@ -173,7 +170,7 @@ export function NewContactsScreen({ onNavigate, dispatch }: NewContactsScreenPro
             </p>
             {!searchQuery && !selectedTag && (
               <button
-                onClick={() => onNavigate({ name: 'addContact' })}
+                onClick={() => navigate({ name: 'addContact' })}
                 className="bg-gradient-to-r from-orange-500 to-pink-500 text-white px-6 py-2 rounded-lg font-medium active:scale-95 transition-transform"
               >
                 Add First Contact
@@ -188,13 +185,13 @@ export function NewContactsScreen({ onNavigate, dispatch }: NewContactsScreenPro
                 type="button"
                 onClick={() => {
                   console.log('Contact card clicked:', contact.id, contact.name);
-                  dispatch({ type: 'VIEW_CONTACT', contactId: contact.id });
+                  viewContact(contact.id);
                 }}
                 onKeyDown={(e) => {
                   if (e.key === 'Enter' || e.key === ' ') {
                     e.preventDefault();
                     console.log('Contact card activated via keyboard:', contact.id, contact.name);
-                    dispatch({ type: 'VIEW_CONTACT', contactId: contact.id });
+                    viewContact(contact.id);
                   }
                 }}
                 tabIndex={0}
