@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ArrowLeft, Mail, Phone, Linkedin, MapPin, Calendar, Tag, Edit2, MessageCircle, Sparkles, Plus, Clock } from 'lucide-react';
+import { ArrowLeft, Mail, Phone, Linkedin, MapPin, Calendar, Tag, CreditCard as Edit2, MessageCircle, Sparkles, Plus, Clock } from 'lucide-react';
 import { useContacts } from '../hooks/useContacts';
 
 interface NewContactDetailScreenProps {
