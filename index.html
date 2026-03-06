@@ -8,6 +8,23 @@
   </head>
   <body>
     <div id="root"></div>
+    <div id="error-log" style="position: fixed; bottom: 0; left: 0; right: 0; max-height: 200px; overflow: auto; background: #fff; border-top: 2px solid #dc2626; display: none; z-index: 9999;"></div>
+    <script>
+      // Show error log on Ctrl+Shift+E
+      document.addEventListener('keydown', function(e) {
+        if (e.ctrlKey && e.shiftKey && e.key === 'E') {
+          const errorLog = document.getElementById('error-log');
+          if (errorLog) {
+            errorLog.style.display = errorLog.style.display === 'none' ? 'block' : 'none';
+          }
+        }
+      });
+
+      // Early error detection
+      window.addEventListener('error', function(e) {
+        console.error('Early error detected:', e.message, e.filename, e.lineno);
+      });
+    </script>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
