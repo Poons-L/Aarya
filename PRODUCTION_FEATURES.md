@@ -70,6 +70,16 @@ A complete, production-ready networking assistant application for managing profe
   - Based on contact's profile, role, company, and notes
   - Graceful degradation if API key not configured
   - Shows helpful message about configuration
+- **Quick Actions Section**:
+  - **Send Email**: Opens default mail client with pre-addressed email (disabled if no email)
+  - **View LinkedIn**: Opens LinkedIn profile in new tab (greyed out if no URL saved)
+  - **Schedule Meeting**: Creates Google Calendar invite with contact name and email
+  - **Export to CRM**: Dropdown with two options:
+    - Export to HubSpot (downloads HubSpot-compatible CSV)
+    - Export to Salesforce (downloads Salesforce-compatible CSV)
+  - **Save as Contact**: Downloads vCard (.vcf) file for phone/Outlook import
+  - All buttons styled with appropriate icons and gradient colors
+  - Graceful handling of missing data
 - Interaction History:
   - View all past interaction notes
   - Add new interaction notes

@@ -1,6 +1,7 @@
 import { useState } from 'react';
-import { ArrowLeft, Mail, Phone, Linkedin, MapPin, Calendar, Tag, CreditCard as Edit2, MessageCircle, Sparkles, Plus, Clock } from 'lucide-react';
+import { ArrowLeft, Mail, Phone, Linkedin, MapPin, Calendar, Tag, CreditCard as Edit2, MessageCircle, Sparkles, Plus, Clock, Send, ExternalLink, CalendarPlus, Download, User, ChevronDown } from 'lucide-react';
 import { useContacts } from '../hooks/useContacts';
+import { downloadVCard, generateHubSpotCSV, generateSalesforceCSV, downloadCSV, createMailtoLink, createCalendarEvent } from '../utils/contactExport';
 
 interface NewContactDetailScreenProps {
   contactId: string;
@@ -22,6 +23,7 @@ export function NewContactDetailScreen({
   const [aiStarters, setAIStarters] = useState<string[]>([]);
   const [newInteraction, setNewInteraction] = useState('');
   const [showAddInteraction, setShowAddInteraction] = useState(false);
+  const [showCRMExport, setShowCRMExport] = useState(false);
 
   if (!contact) {
     onBack();
@@ -136,6 +138,38 @@ Provide 3 specific, personalized conversation starters that reference their work
     });
   };
 
+  const handleSendEmail = () => {
+    if (!contact.email) return;
+    const mailto = createMailtoLink(contact.email, `Following up`, `Hi ${contact.name.split(' ')[0]},\n\n`);
+    window.location.href = mailto;
+  };
+
+  const handleViewLinkedIn = () => {
+    if (!contact.linkedin_url) return;
+    window.open(contact.linkedin_url, '_blank');
+  };
+
+  const handleScheduleMeeting = () => {
+    const calendarUrl = createCalendarEvent(contact.name, contact.email);
+    window.open(calendarUrl, '_blank');
+  };
+
+  const handleExportHubSpot = () => {
+    const csv = generateHubSpotCSV(contact);
+    downloadCSV(csv, `${contact.name.replace(/\s+/g, '_')}_HubSpot.csv`);
+    setShowCRMExport(false);
+  };
+
+  const handleExportSalesforce = () => {
+    const csv = generateSalesforceCSV(contact);
+    downloadCSV(csv, `${contact.name.replace(/\s+/g, '_')}_Salesforce.csv`);
+    setShowCRMExport(false);
+  };
+
+  const handleSaveAsContact = () => {
+    downloadVCard(contact);
+  };
+
   return (
     <div className="h-full bg-gradient-to-br from-slate-50 to-slate-100 flex flex-col">
       <div className="bg-white border-b border-slate-200 px-6 py-4 flex items-center justify-between">
@@ -239,6 +273,109 @@ Provide 3 specific, personalized conversation starters that reference their work
               </div>
             </div>
           )}
+
+          <div className="bg-white rounded-2xl p-4 shadow-sm border border-slate-200 mb-4">
+            <h3 className="text-sm font-semibold text-slate-700 mb-3">Quick Actions</h3>
+            <div className="space-y-2">
+              <button
+                onClick={handleSendEmail}
+                disabled={!contact.email}
+                className={`w-full flex items-center gap-3 p-3 rounded-xl transition-all ${
+                  contact.email
+                    ? 'bg-gradient-to-r from-blue-500 to-blue-600 text-white active:scale-98'
+                    : 'bg-slate-100 text-slate-400 cursor-not-allowed'
+                }`}
+              >
+                <Send size={20} />
+                <div className="text-left flex-1">
+                  <div className="font-semibold text-sm">Send Email</div>
+                  <div className="text-xs opacity-90">
+                    {contact.email || 'No email address'}
+                  </div>
+                </div>
+              </button>
+
+              <button
+                onClick={handleViewLinkedIn}
+                disabled={!contact.linkedin_url}
+                className={`w-full flex items-center gap-3 p-3 rounded-xl transition-all ${
+                  contact.linkedin_url
+                    ? 'bg-gradient-to-r from-blue-600 to-blue-700 text-white active:scale-98'
+                    : 'bg-slate-100 text-slate-400 cursor-not-allowed'
+                }`}
+              >
+                <ExternalLink size={20} />
+                <div className="text-left flex-1">
+                  <div className="font-semibold text-sm">View LinkedIn</div>
+                  <div className="text-xs opacity-90">
+                    {contact.linkedin_url ? 'Open profile' : 'No LinkedIn saved'}
+                  </div>
+                </div>
+              </button>
+
+              <button
+                onClick={handleScheduleMeeting}
+                className="w-full flex items-center gap-3 p-3 rounded-xl bg-gradient-to-r from-green-500 to-emerald-600 text-white active:scale-98 transition-all"
+              >
+                <CalendarPlus size={20} />
+                <div className="text-left flex-1">
+                  <div className="font-semibold text-sm">Schedule Meeting</div>
+                  <div className="text-xs opacity-90">Create calendar invite</div>
+                </div>
+              </button>
+
+              <div className="relative">
+                <button
+                  onClick={() => setShowCRMExport(!showCRMExport)}
+                  className="w-full flex items-center gap-3 p-3 rounded-xl bg-gradient-to-r from-purple-500 to-purple-600 text-white active:scale-98 transition-all"
+                >
+                  <Download size={20} />
+                  <div className="text-left flex-1">
+                    <div className="font-semibold text-sm">Export to CRM</div>
+                    <div className="text-xs opacity-90">HubSpot or Salesforce</div>
+                  </div>
+                  <ChevronDown size={20} className={`transition-transform ${showCRMExport ? 'rotate-180' : ''}`} />
+                </button>
+
+                {showCRMExport && (
+                  <div className="mt-2 space-y-2 pl-4">
+                    <button
+                      onClick={handleExportHubSpot}
+                      className="w-full flex items-center gap-3 p-3 rounded-xl bg-orange-50 border border-orange-200 text-orange-700 active:scale-98 transition-all"
+                    >
+                      <Download size={18} />
+                      <div className="text-left flex-1">
+                        <div className="font-semibold text-sm">Export to HubSpot</div>
+                        <div className="text-xs">Download CSV for HubSpot import</div>
+                      </div>
+                    </button>
+
+                    <button
+                      onClick={handleExportSalesforce}
+                      className="w-full flex items-center gap-3 p-3 rounded-xl bg-blue-50 border border-blue-200 text-blue-700 active:scale-98 transition-all"
+                    >
+                      <Download size={18} />
+                      <div className="text-left flex-1">
+                        <div className="font-semibold text-sm">Export to Salesforce</div>
+                        <div className="text-xs">Download CSV for Salesforce import</div>
+                      </div>
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              <button
+                onClick={handleSaveAsContact}
+                className="w-full flex items-center gap-3 p-3 rounded-xl bg-gradient-to-r from-amber-500 to-orange-600 text-white active:scale-98 transition-all"
+              >
+                <User size={20} />
+                <div className="text-left flex-1">
+                  <div className="font-semibold text-sm">Save as Contact</div>
+                  <div className="text-xs opacity-90">Download vCard (.vcf)</div>
+                </div>
+              </button>
+            </div>
+          </div>
 
           {(contact.met_at || contact.met_date) && (
             <div className="bg-white rounded-2xl p-4 shadow-sm border border-slate-200 mb-4 space-y-3">
