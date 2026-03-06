@@ -185,13 +185,16 @@ export function NewContactsScreen({ onViewContact, onAddContact }: NewContactsSc
             {filteredAndSortedContacts.map(contact => (
               <div
                 key={contact.id}
-                onClick={() => {
-                  console.log('Contact card clicked:', contact.id, contact.name);
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  console.log('clicked');
                   onViewContact(contact.id);
                 }}
-                className="w-full bg-white rounded-xl p-4 shadow-sm border border-slate-200 active:scale-98 transition-transform cursor-pointer"
+                className="w-full bg-white rounded-xl p-4 shadow-sm border border-slate-200 active:scale-98 transition-transform cursor-pointer select-none"
+                style={{ touchAction: 'manipulation' }}
               >
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-3 pointer-events-none">
                   <div className="w-14 h-14 rounded-full bg-gradient-to-br from-orange-400 to-pink-500 flex items-center justify-center text-white font-semibold text-lg flex-shrink-0">
                     {contact.photo_url ? (
                       <img
