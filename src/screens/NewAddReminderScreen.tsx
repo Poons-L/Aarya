@@ -1,12 +1,15 @@
 import { useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft } from 'lucide-react';
 import { useReminders } from '../hooks/useReminders';
 import { useContacts } from '../hooks/useContacts';
 
-export function NewAddReminderScreen() {
-  const { contactId } = useParams<{ contactId: string }>();
-  const navigate = useNavigate();
+interface NewAddReminderScreenProps {
+  contactId?: string;
+  onBack: () => void;
+  onSave: () => void;
+}
+
+export function NewAddReminderScreen({ contactId, onBack, onSave }: NewAddReminderScreenProps) {
   const { addReminder } = useReminders();
   const { contacts } = useContacts();
   const [loading, setLoading] = useState(false);
@@ -35,7 +38,7 @@ export function NewAddReminderScreen() {
         contact_id: formData.contact_id || null,
         priority: formData.priority
       });
-      navigate('/reminders');
+      onSave();
     } catch (error) {
       console.error('Error creating reminder:', error);
       alert('Failed to create reminder. Please try again.');
@@ -47,7 +50,7 @@ export function NewAddReminderScreen() {
   return (
     <div className="h-full bg-gradient-to-br from-slate-50 to-slate-100 flex flex-col">
       <div className="bg-white border-b border-slate-200 px-6 py-4 flex items-center justify-between">
-        <button onClick={() => navigate(-1)} className="text-slate-600 active:text-slate-900">
+        <button onClick={() => onBack()} className="text-slate-600 active:text-slate-900">
           <ArrowLeft size={24} />
         </button>
         <h1 className="text-lg font-semibold text-slate-900">New Reminder</h1>

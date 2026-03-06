@@ -1,10 +1,13 @@
 import { useState, useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { Search, Filter, Users, Plus, X, ChevronDown } from 'lucide-react';
 import { useContacts } from '../hooks/useContacts';
 
-export function NewContactsScreen() {
-  const navigate = useNavigate();
+interface NewContactsScreenProps {
+  onNavigate: (screen: any) => void;
+  dispatch: React.Dispatch<any>;
+}
+
+export function NewContactsScreen({ onNavigate, dispatch }: NewContactsScreenProps) {
   const { contacts } = useContacts();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedTag, setSelectedTag] = useState<string>('');
@@ -71,7 +74,7 @@ export function NewContactsScreen() {
             </p>
           </div>
           <button
-            onClick={() => navigate('/contacts/add')}
+            onClick={() => onNavigate({ name: 'addContact' })}
             className="bg-gradient-to-r from-orange-500 to-pink-500 text-white p-3 rounded-full shadow-lg active:scale-95 transition-transform"
           >
             <Plus size={24} />
@@ -170,7 +173,7 @@ export function NewContactsScreen() {
             </p>
             {!searchQuery && !selectedTag && (
               <button
-                onClick={() => navigate('/contacts/add')}
+                onClick={() => onNavigate({ name: 'addContact' })}
                 className="bg-gradient-to-r from-orange-500 to-pink-500 text-white px-6 py-2 rounded-lg font-medium active:scale-95 transition-transform"
               >
                 Add First Contact
@@ -182,7 +185,7 @@ export function NewContactsScreen() {
             {filteredAndSortedContacts.map(contact => (
               <div
                 key={contact.id}
-                onClick={() => navigate(`/contacts/${contact.id}`)}
+                onClick={() => dispatch({ type: 'VIEW_CONTACT', contactId: contact.id })}
                 style={{ cursor: 'pointer' }}
                 className="w-full bg-white rounded-xl p-4 shadow-sm border border-slate-200 active:scale-98 transition-transform"
               >

@@ -1,16 +1,18 @@
 import { useState } from 'react';
-import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { ArrowLeft, Camera, X, Plus } from 'lucide-react';
 import { useContacts } from '../hooks/useContacts';
 
-export function FullAddContactScreen() {
-  const { id } = useParams<{ id: string }>();
-  const navigate = useNavigate();
-  const location = useLocation();
+interface FullAddContactScreenProps {
+  contactId?: string;
+  onBack: () => void;
+  onSave: () => void;
+}
+
+export function FullAddContactScreen({ contactId, onBack, onSave }: FullAddContactScreenProps) {
   const { contacts, addContact, updateContact } = useContacts();
 
-  const isEdit = location.pathname.includes('/edit');
-  const contactToEdit = isEdit && id ? contacts.find(c => c.id === id) : null;
+  const isEdit = !!contactId;
+  const contactToEdit = isEdit && contactId ? contacts.find(c => c.id === contactId) : null;
   const [loading, setLoading] = useState(false);
   const [photoPreview, setPhotoPreview] = useState(contactToEdit?.photo_url || '');
 
@@ -72,9 +74,9 @@ export function FullAddContactScreen() {
       }
 
       if (isEdit) {
-        navigate(`/contacts/${id}`);
+        onSave();
       } else {
-        navigate('/contacts');
+        onSave();
       }
     } catch (error) {
       console.error('Error saving contact:', error);
@@ -87,7 +89,7 @@ export function FullAddContactScreen() {
   return (
     <div className="h-full bg-gradient-to-br from-slate-50 to-slate-100 flex flex-col">
       <div className="bg-white border-b border-slate-200 px-6 py-4 flex items-center justify-between">
-        <button onClick={() => navigate(-1)} className="text-slate-600 active:text-slate-900">
+        <button onClick={() => onBack()} className="text-slate-600 active:text-slate-900">
           <ArrowLeft size={24} />
         </button>
         <h1 className="text-lg font-semibold text-slate-900">

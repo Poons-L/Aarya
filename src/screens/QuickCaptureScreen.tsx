@@ -1,10 +1,13 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Camera, Mic, StopCircle } from 'lucide-react';
 import { useContacts } from '../hooks/useContacts';
 
-export function QuickCaptureScreen() {
-  const navigate = useNavigate();
+interface QuickCaptureScreenProps {
+  onBack: () => void;
+  onComplete: () => void;
+}
+
+export function QuickCaptureScreen({ onBack, onComplete }: QuickCaptureScreenProps) {
   const { addContact } = useContacts();
   const [loading, setLoading] = useState(false);
   const [name, setName] = useState('');
@@ -45,7 +48,7 @@ export function QuickCaptureScreen() {
         notes: note,
         met_date: new Date().toISOString().split('T')[0],
       });
-      navigate('/home');
+      onComplete();
     } catch (error) {
       console.error('Error saving contact:', error);
       alert('Failed to save contact. Please try again.');
@@ -57,7 +60,7 @@ export function QuickCaptureScreen() {
   return (
     <div className="h-full bg-gradient-to-br from-slate-50 to-slate-100 flex flex-col">
       <div className="bg-white border-b border-slate-200 px-6 py-4 flex items-center justify-between">
-        <button onClick={() => navigate('/home')} className="text-slate-600 active:text-slate-900">
+        <button onClick={() => onComplete()} className="text-slate-600 active:text-slate-900">
           <ArrowLeft size={24} />
         </button>
         <h1 className="text-lg font-semibold text-slate-900">Quick Capture</h1>
