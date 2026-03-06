@@ -183,12 +183,15 @@ export function NewContactsScreen({ onSelectContact, onAddContact }: NewContacts
         ) : (
           <div className="space-y-2 pb-4">
             {filteredAndSortedContacts.map(contact => (
-              <button
+              <div
                 key={contact.id}
-                onClick={() => onSelectContact(contact.id)}
-                className="w-full bg-white rounded-xl p-4 shadow-sm border border-slate-200 active:scale-98 transition-transform"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onSelectContact(contact.id);
+                }}
+                className="w-full bg-white rounded-xl p-4 shadow-sm border border-slate-200 active:scale-98 transition-transform cursor-pointer"
               >
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-3 pointer-events-none">
                   <div className="w-14 h-14 rounded-full bg-gradient-to-br from-orange-400 to-pink-500 flex items-center justify-center text-white font-semibold text-lg flex-shrink-0">
                     {contact.photo_url ? (
                       <img
@@ -230,7 +233,7 @@ export function NewContactsScreen({ onSelectContact, onAddContact }: NewContacts
                     )}
                   </div>
                 </div>
-              </button>
+              </div>
             ))}
           </div>
         )}
