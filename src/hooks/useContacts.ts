@@ -11,10 +11,12 @@ export interface Contact {
   email?: string;
   phone?: string;
   photo_url?: string;
+  linkedin_url?: string;
   met_at?: string;
   met_date: string;
   notes?: string;
   last_contact?: string;
+  interaction_history?: any[];
   created_at: string;
   updated_at: string;
   tags?: string[];
@@ -85,9 +87,11 @@ export function useContacts() {
             email: contactData.email,
             phone: contactData.phone,
             photo_url: contactData.photo_url,
+            linkedin_url: contactData.linkedin_url,
             met_at: contactData.met_at,
             met_date: contactData.met_date,
             notes: contactData.notes,
+            interaction_history: contactData.interaction_history || [],
           },
         ])
         .select()
