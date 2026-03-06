@@ -47,9 +47,9 @@ function generateCSV(data: ExportData): string {
   });
 
   csv += '\nCONTACTS\n';
-  csv += 'ID,Name,Company,Title,Email,Phone,Met At,Met Date,Source,Created At\n';
+  csv += 'ID,Name,Company,Title,Email,Phone,Met At,Met Date,Created At\n';
   data.contacts.forEach(contact => {
-    csv += `"${contact.id}","${escapeCSV(contact.name)}","${escapeCSV(contact.company || '')}","${escapeCSV(contact.title || '')}","${contact.email || ''}","${contact.phone || ''}","${escapeCSV(contact.met_at || '')}","${contact.met_date}","${contact.source || ''}","${contact.created_at}"\n`;
+    csv += `"${contact.id}","${escapeCSV(contact.name)}","${escapeCSV(contact.company || '')}","${escapeCSV(contact.title || '')}","${contact.email || ''}","${contact.phone || ''}","${escapeCSV(contact.met_at || '')}","${contact.met_date}","${contact.created_at}"\n`;
   });
 
   csv += '\nREMINDERS\n';

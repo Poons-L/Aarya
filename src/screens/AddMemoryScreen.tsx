@@ -116,7 +116,6 @@ export function AddMemoryScreen({ onBack, onSave, onHome, contacts = [] }: AddMe
         title: contactInfo.title,
         email: contactInfo.email,
         phone: contactInfo.phone,
-        source: 'ocr',
       });
 
       if (data) {
