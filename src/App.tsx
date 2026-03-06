@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react';
-import { MobileFrame } from './components/MobileFrame';
 import { WelcomeScreen } from './screens/WelcomeScreen';
 import { OnboardingScreen } from './screens/OnboardingScreen';
 import { AuthScreen } from './screens/AuthScreen';
@@ -62,11 +61,9 @@ function App() {
 
   if (authLoading) {
     return (
-      <MobileFrame>
-        <div className="h-full flex items-center justify-center bg-gradient-to-br from-amber-400 via-orange-500 to-pink-500">
-          <div className="text-white text-xl font-semibold">Loading...</div>
-        </div>
-      </MobileFrame>
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-amber-400 via-orange-500 to-pink-500">
+        <div className="text-white text-xl font-semibold">Loading...</div>
+      </div>
     );
   }
 
@@ -324,9 +321,11 @@ function App() {
   };
 
   return (
-    <MobileFrame>
-      {renderScreen()}
-    </MobileFrame>
+    <div className="min-h-screen bg-slate-50 flex justify-center">
+      <div className="w-full max-w-[430px] min-h-screen bg-white shadow-xl">
+        {renderScreen()}
+      </div>
+    </div>
   );
 }
 
