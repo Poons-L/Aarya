@@ -1,6 +1,8 @@
 import { useState } from 'react';
-import { User, Mail, Camera, LogOut, Info, Bell, Shield, ChevronRight } from 'lucide-react';
+import { User, Mail, Camera, LogOut, Info, Bell, Shield, ChevronRight, Lock } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
+
+const OWNER_EMAIL = 'uplifyt@gmail.com';
 
 interface NewProfileScreenProps {
   onNavigate: (screen: string) => void;
@@ -159,6 +161,19 @@ export function NewProfileScreen({ onNavigate }: NewProfileScreenProps) {
             </div>
             <ChevronRight size={20} className="text-slate-400" />
           </button>
+
+          {user?.email === OWNER_EMAIL && (
+            <button
+              onClick={() => onNavigate('admin')}
+              className="w-full flex items-center justify-between p-4 border-t border-slate-200 active:bg-slate-50 transition-colors bg-gradient-to-r from-orange-50 to-pink-50"
+            >
+              <div className="flex items-center gap-3">
+                <Lock size={20} className="text-orange-600" />
+                <span className="text-slate-900 font-medium">Admin Dashboard</span>
+              </div>
+              <ChevronRight size={20} className="text-orange-400" />
+            </button>
+          )}
         </div>
 
         <div className="bg-white rounded-2xl p-4 shadow-sm border border-slate-200 mb-6">

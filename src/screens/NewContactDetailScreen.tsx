@@ -62,7 +62,8 @@ export function NewContactDetailScreen({ contactId, onBack, onEditContact, onAdd
         notes: contact.notes,
         tags: contact.tags,
         interests: contact.interests,
-        last_contacted: contact.last_contacted
+        last_contacted: contact.last_contacted,
+        contactId: contact.id
       };
 
       const response = await fetch(apiUrl, {

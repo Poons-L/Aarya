@@ -1,4 +1,5 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
+import { createClient } from "npm:@supabase/supabase-js@2.57.4";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -15,6 +16,7 @@ interface ContactData {
   tags?: string[];
   interests?: string[];
   last_contacted?: string;
+  contactId?: string;
 }
 
 Deno.serve(async (req: Request) => {
@@ -26,6 +28,8 @@ Deno.serve(async (req: Request) => {
   }
 
   try {
+    const supabaseUrl = Deno.env.get("SUPABASE_URL");
+    const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY");
     const openaiApiKey = Deno.env.get("OPENAI_API_KEY");
 
     if (!openaiApiKey) {
@@ -110,6 +114,31 @@ Requirements:
 
     if (starters.length === 0) {
       throw new Error("No starters generated");
+    }
+
+    const authHeader = req.headers.get("Authorization");
+    if (authHeader && supabaseUrl && supabaseAnonKey) {
+      try {
+        const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+          global: {
+            headers: { Authorization: authHeader },
+          },
+        });
+
+        const { data: { user } } = await supabase.auth.getUser();
+
+        if (user) {
+          await supabase.from("ai_usage_logs").insert({
+            user_id: user.id,
+            contact_id: contactData.contactId || null,
+            feature_type: "conversation_starters",
+            tokens_used: data.usage?.total_tokens || null,
+            success: true,
+          });
+        }
+      } catch (logError) {
+        console.error("Failed to log AI usage:", logError);
+      }
     }
 
     return new Response(

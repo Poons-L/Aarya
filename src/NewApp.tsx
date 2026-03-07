@@ -10,6 +10,7 @@ import { QuickCaptureScreen } from './screens/QuickCaptureScreen';
 import { NewRemindersScreen } from './screens/NewRemindersScreen';
 import { NewAddReminderScreen } from './screens/NewAddReminderScreen';
 import { NewProfileScreen } from './screens/NewProfileScreen';
+import OwnerAdminDashboard from './screens/OwnerAdminDashboard';
 import { BottomTabNav } from './components/BottomTabNav';
 import { useAuth } from './contexts/AuthContext';
 import { useReminders } from './hooks/useReminders';
@@ -17,7 +18,7 @@ import { useReminders } from './hooks/useReminders';
 type Tab = 'home' | 'contacts' | 'reminders' | 'profile';
 
 interface NavState {
-  screen: 'welcome' | 'onboarding' | 'auth' | 'home' | 'contacts' | 'contactDetail' | 'addContact' | 'editContact' | 'quickCapture' | 'reminders' | 'addReminder' | 'profile';
+  screen: 'welcome' | 'onboarding' | 'auth' | 'home' | 'contacts' | 'contactDetail' | 'addContact' | 'editContact' | 'quickCapture' | 'reminders' | 'addReminder' | 'profile' | 'admin';
   contactId?: string | null;
 }
 
@@ -250,6 +251,23 @@ function NewApp() {
         if (screen === 'welcome') {
           setNavState({ screen: 'welcome', contactId: null });
           setHistory([]);
+        } else if (screen === 'admin') {
+          setHistory(prev => [...prev, navState]);
+          setNavState({ screen: 'admin', contactId: null });
+        }
+      }}
+    />;
+  } else if (navState.screen === 'admin') {
+    screenContent = <OwnerAdminDashboard
+      onBack={() => {
+        console.log('Admin: onBack clicked');
+        if (history.length === 0) {
+          setNavState({ screen: 'profile', contactId: null });
+        } else {
+          const newHistory = [...history];
+          const previousState = newHistory.pop()!;
+          setHistory(newHistory);
+          setNavState(previousState);
         }
       }}
     />;
