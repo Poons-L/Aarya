@@ -51,60 +51,47 @@ export function NewContactDetailScreen({ contactId, onBack, onEditContact, onAdd
     setGeneratingAI(true);
     setShowAIStarters(true);
 
-    const apiKey = import.meta.env.VITE_OPENAI_API_KEY;
-
-    if (!apiKey) {
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      setAIStarters([
-        'AI feature requires an OpenAI API key to be configured.',
-        'Please add VITE_OPENAI_API_KEY to your environment variables.',
-        'This feature will generate personalized conversation starters based on the contact\'s profile.'
-      ]);
-      setGeneratingAI(false);
-      return;
-    }
-
     try {
-      const response = await fetch('https://api.openai.com/v1/chat/completions', {
+      const apiUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-conversation-starters`;
+
+      const contactData = {
+        name: contact.name,
+        title: contact.title,
+        company: contact.company,
+        relationship: contact.relationship,
+        notes: contact.notes,
+        tags: contact.tags,
+        interests: contact.interests,
+        last_contacted: contact.last_contacted
+      };
+
+      const response = await fetch(apiUrl, {
         method: 'POST',
         headers: {
+          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${apiKey}`
         },
-        body: JSON.stringify({
-          model: 'gpt-3.5-turbo',
-          messages: [{
-            role: 'user',
-            content: `Generate 3 personalized conversation starters for reconnecting with this contact:
-Name: ${contact.name}
-Company: ${contact.company || 'Unknown'}
-Title: ${contact.title || 'Unknown'}
-Notes: ${contact.notes || 'None'}
-Met at: ${contact.met_at || 'Unknown'}
-
-Provide 3 specific, personalized conversation starters that reference their work, interests, or context. Keep each under 100 characters. Return as a JSON array of strings.`
-          }],
-          temperature: 0.7,
-          max_tokens: 300
-        })
+        body: JSON.stringify(contactData)
       });
 
       if (response.ok) {
         const data = await response.json();
-        const content = data.choices[0].message.content;
-        try {
-          const parsed = JSON.parse(content);
-          setAIStarters(Array.isArray(parsed) ? parsed : [content]);
-        } catch {
-          setAIStarters([content]);
+        if (data.starters && Array.isArray(data.starters)) {
+          setAIStarters(data.starters);
+        } else if (data.error) {
+          setAIStarters([
+            'Unable to generate AI conversation starters.',
+            data.error
+          ]);
         }
       } else {
         setAIStarters([
           'Unable to generate AI conversation starters.',
-          'Please check your API key and try again.'
+          'Please try again later.'
         ]);
       }
     } catch (error) {
+      console.error('Error generating AI starters:', error);
       setAIStarters([
         'Error connecting to AI service.',
         'Please check your internet connection and try again.'
