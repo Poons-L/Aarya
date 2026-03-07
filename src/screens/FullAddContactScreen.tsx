@@ -71,10 +71,16 @@ export function FullAddContactScreen({ contactId, onBack, onSave }: FullAddConta
     try {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) {
-        throw new Error('Not authenticated');
+        setNotification({ type: 'error', message: 'Not authenticated. Please log in.' });
+        setTimeout(() => setNotification(null), 3000);
+        setSmartPasteLoading(false);
+        return;
       }
 
       const apiUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/smart-paste`;
+
+      console.log('Calling smart-paste function with URL:', apiUrl);
+
       const response = await fetch(apiUrl, {
         method: 'POST',
         headers: {
@@ -84,11 +90,16 @@ export function FullAddContactScreen({ contactId, onBack, onSave }: FullAddConta
         body: JSON.stringify({ text: pastedText }),
       });
 
+      console.log('Smart-paste response status:', response.status);
+
       if (!response.ok) {
-        throw new Error('Failed to parse text');
+        const errorData = await response.json().catch(() => ({}));
+        console.error('Smart-paste error:', errorData);
+        throw new Error(errorData.error || 'Failed to parse text');
       }
 
       const result = await response.json();
+      console.log('Smart-paste result:', result);
 
       if (result.success && result.data) {
         const data = result.data;
@@ -112,12 +123,14 @@ export function FullAddContactScreen({ contactId, onBack, onSave }: FullAddConta
         setTimeout(() => setNotification(null), 3000);
         setShowSmartPaste(false);
         setPastedText('');
+      } else {
+        throw new Error('Invalid response format');
       }
     } catch (error) {
       console.error('Smart paste error:', error);
       setNotification({
         type: 'error',
-        message: 'Could not parse text. Please fill in manually.'
+        message: error instanceof Error ? error.message : 'Could not parse text. Please fill in manually.'
       });
       setTimeout(() => setNotification(null), 3000);
     } finally {
