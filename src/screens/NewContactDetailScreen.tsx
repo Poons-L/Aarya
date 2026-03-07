@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { ArrowLeft, Mail, Phone, Linkedin, MapPin, Calendar, Tag, CreditCard as Edit2, MessageCircle, Sparkles, Plus, Clock, Send, ExternalLink, CalendarPlus, Download, User, ChevronDown } from 'lucide-react';
 import { useContacts } from '../hooks/useContacts';
+import { useAuth } from '../contexts/AuthContext';
 import { downloadVCard, generateHubSpotCSV, generateSalesforceCSV, downloadCSV, createMailtoLink, createCalendarEvent } from '../utils/contactExport';
 
 interface NewContactDetailScreenProps {
@@ -12,6 +13,7 @@ interface NewContactDetailScreenProps {
 
 export function NewContactDetailScreen({ contactId, onBack, onEditContact, onAddReminder }: NewContactDetailScreenProps) {
   const { contacts, updateContact } = useContacts();
+  const { session } = useAuth();
   const contact = contacts.find(c => c.id === contactId);
   const [showAIStarters, setShowAIStarters] = useState(false);
   const [generatingAI, setGeneratingAI] = useState(false);
@@ -60,6 +62,12 @@ export function NewContactDetailScreen({ contactId, onBack, onEditContact, onAdd
     setShowAIStarters(true);
 
     try {
+      if (!session?.access_token) {
+        setAIStarters(['Please sign in to use AI features.']);
+        setGeneratingAI(false);
+        return;
+      }
+
       const apiUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-conversation-starters`;
 
       const contactData = {
@@ -75,16 +83,19 @@ export function NewContactDetailScreen({ contactId, onBack, onEditContact, onAdd
         forceRefresh
       };
 
+      console.log('Calling AI edge function with:', { apiUrl, contactData });
+
       const response = await fetch(apiUrl, {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+          'Authorization': `Bearer ${session.access_token}`,
           'Content-Type': 'application/json',
         },
         body: JSON.stringify(contactData)
       });
 
       const data = await response.json();
+      console.log('AI response:', { status: response.status, data });
 
       if (response.status === 429) {
         setAIStarters([data.message || 'Rate limit reached. Please try again later.']);
@@ -106,22 +117,24 @@ export function NewContactDetailScreen({ contactId, onBack, onEditContact, onAdd
             monthlyLimit: data.monthlyLimit,
           });
         } else if (data.error) {
+          console.error('AI error:', data.error);
           setAIStarters([
             'Unable to generate AI conversation starters.',
             data.error
           ]);
         }
       } else {
+        console.error('AI request failed:', response.status, data);
         setAIStarters([
           'Unable to generate AI conversation starters.',
-          data.message || 'Please try again later.'
+          data.error || data.message || `Error: ${response.status}`
         ]);
       }
     } catch (error) {
       console.error('Error generating AI starters:', error);
       setAIStarters([
         'Error connecting to AI service.',
-        'Please check your internet connection and try again.'
+        error instanceof Error ? error.message : 'Please try again later.'
       ]);
     } finally {
       setGeneratingAI(false);
