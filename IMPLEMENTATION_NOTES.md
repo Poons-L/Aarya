@@ -145,4 +145,4 @@ Already configured in `.env`:
 - `VITE_SUPABASE_ANON_KEY` - Supabase anonymous key
 
 **To Add:**
-- `VITE_OPENAI_API_KEY` - For AI features (when you're ready)
+- `OPENAI_API_KEY` - For AI features (when you're ready)
