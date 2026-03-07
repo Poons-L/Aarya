@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { User, Mail, Camera, LogOut, Info, Bell, Shield, ChevronRight, Lock } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 
-const OWNER_EMAIL = 'poonam@uplifyt.com';
+const OWNER_EMAIL = 'Chicchori@gmail.com';
 
 interface NewProfileScreenProps {
   onNavigate: (screen: string) => void;

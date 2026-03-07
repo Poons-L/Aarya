@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { ArrowLeft, Users, Contact, Sparkles, TrendingUp, Search, Calendar, Mail, Building2, Clock } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 
-const OWNER_EMAIL = 'poonam@uplifyt.com';
+const OWNER_EMAIL = 'Chicchori@gmail.com';
 
 interface OwnerAdminDashboardProps {
   onBack?: () => void;

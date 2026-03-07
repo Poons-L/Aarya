@@ -7,7 +7,7 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "Content-Type, Authorization, X-Client-Info, Apikey",
 };
 
-const OWNER_EMAIL = "poonam@uplifyt.com";
+const OWNER_EMAIL = "Chicchori@gmail.com";
 
 Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") {

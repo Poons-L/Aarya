@@ -7,7 +7,7 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "Content-Type, Authorization, X-Client-Info, Apikey",
 };
 
-const OWNER_EMAIL = "poonam@uplifyt.com";
+const OWNER_EMAIL = "Chicchori@gmail.com";
 const DAILY_LIMIT = 5;
 const MONTHLY_LIMIT = 50;
 const CACHE_DAYS = 7;
