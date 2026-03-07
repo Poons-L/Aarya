@@ -16,6 +16,14 @@ export function NewContactDetailScreen({ contactId, onBack, onEditContact, onAdd
   const [showAIStarters, setShowAIStarters] = useState(false);
   const [generatingAI, setGeneratingAI] = useState(false);
   const [aiStarters, setAIStarters] = useState<string[]>([]);
+  const [aiMetadata, setAiMetadata] = useState<{
+    cached?: boolean;
+    daysAgo?: number;
+    dailyUsed?: number;
+    dailyLimit?: number | null;
+    monthlyUsed?: number;
+    monthlyLimit?: number | null;
+  }>({});
   const [newInteraction, setNewInteraction] = useState('');
   const [showAddInteraction, setShowAddInteraction] = useState(false);
   const [showCRMExport, setShowCRMExport] = useState(false);
@@ -47,7 +55,7 @@ export function NewContactDetailScreen({ contactId, onBack, onEditContact, onAdd
 
   const interactionHistory = contact.interaction_history || [];
 
-  const generateAIStarters = async () => {
+  const generateAIStarters = async (forceRefresh = false) => {
     setGeneratingAI(true);
     setShowAIStarters(true);
 
@@ -63,7 +71,8 @@ export function NewContactDetailScreen({ contactId, onBack, onEditContact, onAdd
         tags: contact.tags,
         interests: contact.interests,
         last_contacted: contact.last_contacted,
-        contactId: contact.id
+        contactId: contact.id,
+        forceRefresh
       };
 
       const response = await fetch(apiUrl, {
@@ -75,10 +84,27 @@ export function NewContactDetailScreen({ contactId, onBack, onEditContact, onAdd
         body: JSON.stringify(contactData)
       });
 
-      if (response.ok) {
-        const data = await response.json();
+      const data = await response.json();
+
+      if (response.status === 429) {
+        setAIStarters([data.message || 'Rate limit reached. Please try again later.']);
+        setAiMetadata({
+          dailyUsed: data.dailyUsed,
+          dailyLimit: data.dailyLimit,
+          monthlyUsed: data.monthlyUsed,
+          monthlyLimit: data.monthlyLimit,
+        });
+      } else if (response.ok) {
         if (data.starters && Array.isArray(data.starters)) {
           setAIStarters(data.starters);
+          setAiMetadata({
+            cached: data.cached,
+            daysAgo: data.daysAgo,
+            dailyUsed: data.dailyUsed,
+            dailyLimit: data.dailyLimit,
+            monthlyUsed: data.monthlyUsed,
+            monthlyLimit: data.monthlyLimit,
+          });
         } else if (data.error) {
           setAIStarters([
             'Unable to generate AI conversation starters.',
@@ -88,7 +114,7 @@ export function NewContactDetailScreen({ contactId, onBack, onEditContact, onAdd
       } else {
         setAIStarters([
           'Unable to generate AI conversation starters.',
-          'Please try again later.'
+          data.message || 'Please try again later.'
         ]);
       }
     } catch (error) {
@@ -259,28 +285,46 @@ export function NewContactDetailScreen({ contactId, onBack, onEditContact, onAdd
             </div>
           )}
 
-          <button
-            onClick={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              generateAIStarters();
-            }}
-            disabled={generatingAI}
-            className="w-full bg-gradient-to-r from-purple-500 to-pink-500 text-white p-4 rounded-xl shadow-md mb-4 active:scale-98 transition-transform disabled:opacity-50"
-          >
-            <div className="flex items-center justify-center gap-2">
-              <Sparkles size={20} />
-              <span className="font-semibold">
-                {generatingAI ? 'Generating...' : 'AI Conversation Starters'}
-              </span>
-            </div>
-          </button>
+          <div className="mb-4">
+            <button
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                generateAIStarters(false);
+              }}
+              disabled={generatingAI}
+              className="w-full bg-gradient-to-r from-purple-500 to-pink-500 text-white p-4 rounded-xl shadow-md active:scale-98 transition-transform disabled:opacity-50"
+            >
+              <div className="flex items-center justify-center gap-2">
+                <Sparkles size={20} />
+                <span className="font-semibold">
+                  {generatingAI ? 'Generating...' : (aiMetadata.cached ? 'Refresh AI Starters' : 'AI Conversation Starters')}
+                </span>
+              </div>
+            </button>
+
+            {aiMetadata.dailyLimit !== undefined && aiMetadata.dailyLimit !== null && (
+              <div className="mt-2 text-center text-xs text-slate-600">
+                {aiMetadata.dailyUsed}/{aiMetadata.dailyLimit} used today • {aiMetadata.monthlyUsed}/{aiMetadata.monthlyLimit} this month
+              </div>
+            )}
+          </div>
 
           {showAIStarters && (
             <div className="bg-gradient-to-br from-purple-50 to-pink-50 rounded-2xl p-4 border border-purple-200 mb-4">
-              <div className="flex items-center gap-2 mb-3">
-                <Sparkles size={18} className="text-purple-600" />
-                <h3 className="font-semibold text-purple-900">Conversation Starters</h3>
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-2">
+                  <Sparkles size={18} className="text-purple-600" />
+                  <h3 className="font-semibold text-purple-900">Conversation Starters</h3>
+                </div>
+                {aiMetadata.cached && aiMetadata.daysAgo !== undefined && (
+                  <div className="flex items-center gap-1 text-xs text-purple-600">
+                    <Clock size={14} />
+                    <span>
+                      {aiMetadata.daysAgo === 0 ? 'Just now' : `${aiMetadata.daysAgo}d ago`}
+                    </span>
+                  </div>
+                )}
               </div>
               <div className="space-y-2">
                 {aiStarters.map((starter, index) => (
@@ -292,6 +336,19 @@ export function NewContactDetailScreen({ contactId, onBack, onEditContact, onAdd
                   </div>
                 ))}
               </div>
+              {aiMetadata.cached && (
+                <button
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    generateAIStarters(true);
+                  }}
+                  disabled={generatingAI}
+                  className="mt-3 w-full text-center text-sm text-purple-600 hover:text-purple-700 font-medium disabled:opacity-50"
+                >
+                  Generate fresh starters
+                </button>
+              )}
             </div>
           )}
 
