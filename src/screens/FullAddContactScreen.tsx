@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { ArrowLeft, Camera, X, Plus, Sparkles, ChevronDown, ChevronUp } from 'lucide-react';
 import { useContacts } from '../hooks/useContacts';
 import { supabase } from '../lib/supabase';
@@ -15,28 +15,46 @@ export function FullAddContactScreen({ contactId, onBack, onSave }: FullAddConta
   const isEdit = !!contactId;
   const contactToEdit = isEdit && contactId ? contacts.find(c => c.id === contactId) : null;
   const [loading, setLoading] = useState(false);
-  const [photoPreview, setPhotoPreview] = useState(contactToEdit?.photo_url || '');
+  const [photoPreview, setPhotoPreview] = useState('');
   const [pastedText, setPastedText] = useState('');
   const [smartPasteLoading, setSmartPasteLoading] = useState(false);
-  const [showSmartPaste, setShowSmartPaste] = useState(true);
+  const [showSmartPaste, setShowSmartPaste] = useState(!isEdit);
   const [notification, setNotification] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
 
   const [formData, setFormData] = useState({
-    name: contactToEdit?.name || '',
-    company: contactToEdit?.company || '',
-    title: contactToEdit?.title || '',
-    phone: contactToEdit?.phone || '',
-    email: contactToEdit?.email || '',
-    linkedin_url: contactToEdit?.linkedin_url || '',
-    met_at: contactToEdit?.met_at || '',
-    met_date: contactToEdit?.met_date || new Date().toISOString().split('T')[0],
-    notes: contactToEdit?.notes || '',
+    name: '',
+    company: '',
+    title: '',
+    phone: '',
+    email: '',
+    linkedin_url: '',
+    met_at: '',
+    met_date: new Date().toISOString().split('T')[0],
+    notes: '',
   });
 
-  const [tags, setTags] = useState<string[]>(
-    (contactToEdit?.tags && Array.isArray(contactToEdit.tags)) ? contactToEdit.tags : []
-  );
+  const [tags, setTags] = useState<string[]>([]);
   const [tagInput, setTagInput] = useState('');
+
+  // Pre-populate form when editing and contact data is available
+  useEffect(() => {
+    if (isEdit && contactToEdit) {
+      console.log('Pre-populating form with contact data:', contactToEdit);
+      setFormData({
+        name: contactToEdit.name || '',
+        company: contactToEdit.company || '',
+        title: contactToEdit.title || '',
+        phone: contactToEdit.phone || '',
+        email: contactToEdit.email || '',
+        linkedin_url: contactToEdit.linkedin_url || '',
+        met_at: contactToEdit.met_at || '',
+        met_date: contactToEdit.met_date || new Date().toISOString().split('T')[0],
+        notes: contactToEdit.notes || '',
+      });
+      setPhotoPreview(contactToEdit.photo_url || '');
+      setTags((contactToEdit.tags && Array.isArray(contactToEdit.tags)) ? contactToEdit.tags : []);
+    }
+  }, [isEdit, contactToEdit]);
 
   const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
