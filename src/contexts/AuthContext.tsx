@@ -20,6 +20,7 @@ interface AuthContextType {
   isAdmin: boolean;
   signUp: (email: string, password: string, fullName: string) => Promise<{ error: any }>;
   signIn: (email: string, password: string) => Promise<{ error: any }>;
+  signInWithGoogle: () => Promise<{ error: any }>;
   signOut: () => Promise<void>;
   updateProfile: (data: Partial<Profile>) => Promise<{ error: any }>;
 }
@@ -47,10 +48,35 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     };
 
+    const createProfileIfNeeded = async (user: User) => {
+      const { data: existingProfile } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', user.id)
+        .maybeSingle();
+
+      if (!existingProfile) {
+        const { error: profileError } = await supabase
+          .from('profiles')
+          .insert([
+            {
+              id: user.id,
+              email: user.email,
+              full_name: user.user_metadata?.full_name || user.user_metadata?.name || user.email?.split('@')[0],
+            },
+          ]);
+
+        if (profileError) {
+          console.error('Error creating profile:', profileError);
+        }
+      }
+    };
+
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
       setUser(session?.user ?? null);
       if (session?.user) {
+        createProfileIfNeeded(session.user);
         fetchProfile(session.user.id);
       } else {
         setProfile(null);
@@ -64,6 +90,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setSession(session);
         setUser(session?.user ?? null);
         if (session?.user) {
+          await createProfileIfNeeded(session.user);
           await fetchProfile(session.user.id);
         } else {
           setProfile(null);
@@ -110,6 +137,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return { error };
   };
 
+  const signInWithGoogle = async () => {
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: {
+        redirectTo: 'https://reme.uplifyt.com',
+        queryParams: {
+          access_type: 'offline',
+          prompt: 'consent',
+        }
+      }
+    });
+
+    return { error };
+  };
+
   const signOut = async () => {
     await supabase.auth.signOut();
     setProfile(null);
@@ -150,6 +192,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     isAdmin,
     signUp,
     signIn,
+    signInWithGoogle,
     signOut,
     updateProfile,
   };
