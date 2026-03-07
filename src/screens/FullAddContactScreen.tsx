@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ArrowLeft, Camera, X, Plus, Linkedin } from 'lucide-react';
+import { ArrowLeft, Camera, X, Plus, Sparkles, ChevronDown, ChevronUp } from 'lucide-react';
 import { useContacts } from '../hooks/useContacts';
 import { supabase } from '../lib/supabase';
 
@@ -16,8 +16,9 @@ export function FullAddContactScreen({ contactId, onBack, onSave }: FullAddConta
   const contactToEdit = isEdit && contactId ? contacts.find(c => c.id === contactId) : null;
   const [loading, setLoading] = useState(false);
   const [photoPreview, setPhotoPreview] = useState(contactToEdit?.photo_url || '');
-  const [linkedinUrl, setLinkedinUrl] = useState('');
-  const [autofillLoading, setAutofillLoading] = useState(false);
+  const [pastedText, setPastedText] = useState('');
+  const [smartPasteLoading, setSmartPasteLoading] = useState(false);
+  const [showSmartPaste, setShowSmartPaste] = useState(true);
   const [notification, setNotification] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
 
   const [formData, setFormData] = useState({
@@ -59,69 +60,68 @@ export function FullAddContactScreen({ contactId, onBack, onSave }: FullAddConta
     setTags(tags.filter(tag => tag !== tagToRemove));
   };
 
-  const handleLinkedInAutofill = async () => {
-    if (!linkedinUrl.trim()) {
-      setNotification({ type: 'error', message: 'Please enter a LinkedIn URL' });
+  const handleSmartPaste = async () => {
+    if (!pastedText.trim()) {
+      setNotification({ type: 'error', message: 'Please paste some text first' });
       setTimeout(() => setNotification(null), 3000);
       return;
     }
 
-    setAutofillLoading(true);
+    setSmartPasteLoading(true);
     try {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) {
         throw new Error('Not authenticated');
       }
 
-      const apiUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/linkedin-autofill`;
+      const apiUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/smart-paste`;
       const response = await fetch(apiUrl, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${session.access_token}`,
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ linkedin_url: linkedinUrl }),
+        body: JSON.stringify({ text: pastedText }),
       });
 
       if (!response.ok) {
-        throw new Error('Failed to fetch LinkedIn data');
+        throw new Error('Failed to parse text');
       }
 
       const result = await response.json();
 
       if (result.success && result.data) {
+        const data = result.data;
         const nameParts = [];
-        if (result.data.first_name) nameParts.push(result.data.first_name);
-        if (result.data.last_name) nameParts.push(result.data.last_name);
-        const fullName = nameParts.length > 0 ? nameParts.join(' ') : formData.name;
+        if (data.first_name) nameParts.push(data.first_name);
+        if (data.last_name) nameParts.push(data.last_name);
+        const fullName = nameParts.length > 0 ? nameParts.join(' ') : null;
 
         setFormData({
           ...formData,
           name: fullName || formData.name,
-          company: result.data.company || formData.company,
-          title: result.data.job_title || formData.title,
-          phone: result.data.phone || formData.phone,
-          email: result.data.email || formData.email,
-          linkedin_url: linkedinUrl,
-          notes: result.data.notes || formData.notes,
+          company: data.company || formData.company,
+          title: data.job_title || formData.title,
+          phone: data.phone || formData.phone,
+          email: data.email || formData.email,
+          linkedin_url: data.linkedin_url || formData.linkedin_url,
+          notes: data.notes || formData.notes,
         });
 
-        if (result.data.photo_url) {
-          setPhotoPreview(result.data.photo_url);
-        }
-
-        setNotification({ type: 'success', message: 'Profile data imported from LinkedIn' });
+        setNotification({ type: 'success', message: '✅ Contact details filled in!' });
         setTimeout(() => setNotification(null), 3000);
+        setShowSmartPaste(false);
+        setPastedText('');
       }
     } catch (error) {
-      console.error('LinkedIn autofill error:', error);
+      console.error('Smart paste error:', error);
       setNotification({
         type: 'error',
-        message: 'Could not fetch LinkedIn data. Please fill in manually.'
+        message: 'Could not parse text. Please fill in manually.'
       });
       setTimeout(() => setNotification(null), 3000);
     } finally {
-      setAutofillLoading(false);
+      setSmartPasteLoading(false);
     }
   };
 
@@ -180,44 +180,65 @@ export function FullAddContactScreen({ contactId, onBack, onSave }: FullAddConta
             </div>
           )}
 
-          <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-2xl p-4 shadow-sm border-2 border-blue-200">
-            <div className="flex items-center gap-2 mb-3">
-              <div className="bg-blue-600 text-white p-2 rounded-lg">
-                <Linkedin size={20} />
+          {!showSmartPaste ? (
+            <button
+              type="button"
+              onClick={() => setShowSmartPaste(true)}
+              className="w-full bg-gradient-to-r from-violet-50 to-fuchsia-50 border-2 border-violet-200 rounded-xl p-4 flex items-center justify-center gap-2 text-violet-700 font-medium active:scale-98 transition-transform"
+            >
+              <Sparkles size={20} />
+              <span>Show Smart Paste</span>
+              <ChevronDown size={20} />
+            </button>
+          ) : (
+            <div className="bg-gradient-to-br from-violet-50 to-fuchsia-50 rounded-2xl p-4 shadow-sm border-2 border-violet-200">
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-2">
+                  <div className="bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white p-2 rounded-lg">
+                    <Sparkles size={20} />
+                  </div>
+                  <h3 className="font-semibold text-violet-900">Smart Paste</h3>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setShowSmartPaste(false)}
+                  className="text-violet-600 hover:text-violet-800"
+                >
+                  <ChevronUp size={20} />
+                </button>
               </div>
-              <h3 className="font-semibold text-blue-900">Import from LinkedIn</h3>
+              <div className="space-y-3">
+                <textarea
+                  value={pastedText}
+                  onChange={(e) => setPastedText(e.target.value)}
+                  placeholder="Paste anything - LinkedIn profile text, email signature, business card text..."
+                  rows={4}
+                  className="w-full px-4 py-3 bg-white border border-violet-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-violet-400 focus:border-transparent resize-none"
+                />
+                <button
+                  type="button"
+                  onClick={handleSmartPaste}
+                  disabled={smartPasteLoading || !pastedText.trim()}
+                  className="w-full bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white py-3 rounded-xl font-semibold disabled:opacity-50 disabled:cursor-not-allowed active:scale-98 transition-transform flex items-center justify-center gap-2"
+                >
+                  {smartPasteLoading ? (
+                    <>
+                      <div className="animate-spin h-5 w-5 border-2 border-white border-t-transparent rounded-full"></div>
+                      Processing...
+                    </>
+                  ) : (
+                    <>
+                      <Sparkles size={20} />
+                      Auto-fill from text
+                    </>
+                  )}
+                </button>
+                <p className="text-xs text-violet-700">
+                  Copy text from anywhere and our AI will extract contact details automatically
+                </p>
+              </div>
             </div>
-            <div className="space-y-3">
-              <input
-                type="url"
-                value={linkedinUrl}
-                onChange={(e) => setLinkedinUrl(e.target.value)}
-                placeholder="https://linkedin.com/in/username"
-                className="w-full px-4 py-3 bg-white border border-blue-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent"
-              />
-              <button
-                type="button"
-                onClick={handleLinkedInAutofill}
-                disabled={autofillLoading || !linkedinUrl.trim()}
-                className="w-full bg-blue-600 text-white py-3 rounded-xl font-semibold disabled:opacity-50 disabled:cursor-not-allowed active:scale-98 transition-transform flex items-center justify-center gap-2"
-              >
-                {autofillLoading ? (
-                  <>
-                    <div className="animate-spin h-5 w-5 border-2 border-white border-t-transparent rounded-full"></div>
-                    Fetching...
-                  </>
-                ) : (
-                  <>
-                    <Linkedin size={20} />
-                    Autofill from LinkedIn
-                  </>
-                )}
-              </button>
-              <p className="text-xs text-blue-700">
-                Paste a LinkedIn profile URL to automatically import contact details
-              </p>
-            </div>
-          </div>
+          )}
 
           <div className="flex flex-col items-center">
             <div className="relative">
