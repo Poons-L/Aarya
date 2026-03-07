@@ -1,6 +1,7 @@
 import { useState } from 'react';
-import { ArrowLeft, Camera, X, Plus } from 'lucide-react';
+import { ArrowLeft, Camera, X, Plus, Linkedin } from 'lucide-react';
 import { useContacts } from '../hooks/useContacts';
+import { supabase } from '../lib/supabase';
 
 interface FullAddContactScreenProps {
   contactId?: string;
@@ -15,6 +16,9 @@ export function FullAddContactScreen({ contactId, onBack, onSave }: FullAddConta
   const contactToEdit = isEdit && contactId ? contacts.find(c => c.id === contactId) : null;
   const [loading, setLoading] = useState(false);
   const [photoPreview, setPhotoPreview] = useState(contactToEdit?.photo_url || '');
+  const [linkedinUrl, setLinkedinUrl] = useState('');
+  const [autofillLoading, setAutofillLoading] = useState(false);
+  const [notification, setNotification] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
 
   const [formData, setFormData] = useState({
     name: contactToEdit?.name || '',
@@ -53,6 +57,72 @@ export function FullAddContactScreen({ contactId, onBack, onSave }: FullAddConta
 
   const removeTag = (tagToRemove: string) => {
     setTags(tags.filter(tag => tag !== tagToRemove));
+  };
+
+  const handleLinkedInAutofill = async () => {
+    if (!linkedinUrl.trim()) {
+      setNotification({ type: 'error', message: 'Please enter a LinkedIn URL' });
+      setTimeout(() => setNotification(null), 3000);
+      return;
+    }
+
+    setAutofillLoading(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        throw new Error('Not authenticated');
+      }
+
+      const apiUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/linkedin-autofill`;
+      const response = await fetch(apiUrl, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${session.access_token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ linkedin_url: linkedinUrl }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch LinkedIn data');
+      }
+
+      const result = await response.json();
+
+      if (result.success && result.data) {
+        const nameParts = [];
+        if (result.data.first_name) nameParts.push(result.data.first_name);
+        if (result.data.last_name) nameParts.push(result.data.last_name);
+        const fullName = nameParts.length > 0 ? nameParts.join(' ') : formData.name;
+
+        setFormData({
+          ...formData,
+          name: fullName || formData.name,
+          company: result.data.company || formData.company,
+          title: result.data.job_title || formData.title,
+          phone: result.data.phone || formData.phone,
+          email: result.data.email || formData.email,
+          linkedin_url: linkedinUrl,
+          notes: result.data.notes || formData.notes,
+        });
+
+        if (result.data.photo_url) {
+          setPhotoPreview(result.data.photo_url);
+        }
+
+        setNotification({ type: 'success', message: 'Profile data imported from LinkedIn' });
+        setTimeout(() => setNotification(null), 3000);
+      }
+    } catch (error) {
+      console.error('LinkedIn autofill error:', error);
+      setNotification({
+        type: 'error',
+        message: 'Could not fetch LinkedIn data. Please fill in manually.'
+      });
+      setTimeout(() => setNotification(null), 3000);
+    } finally {
+      setAutofillLoading(false);
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -100,6 +170,55 @@ export function FullAddContactScreen({ contactId, onBack, onSave }: FullAddConta
 
       <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto">
         <div className="px-6 py-6 space-y-6">
+          {notification && (
+            <div className={`p-4 rounded-xl ${
+              notification.type === 'success'
+                ? 'bg-green-50 text-green-800 border border-green-200'
+                : 'bg-red-50 text-red-800 border border-red-200'
+            }`}>
+              {notification.message}
+            </div>
+          )}
+
+          <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-2xl p-4 shadow-sm border-2 border-blue-200">
+            <div className="flex items-center gap-2 mb-3">
+              <div className="bg-blue-600 text-white p-2 rounded-lg">
+                <Linkedin size={20} />
+              </div>
+              <h3 className="font-semibold text-blue-900">Import from LinkedIn</h3>
+            </div>
+            <div className="space-y-3">
+              <input
+                type="url"
+                value={linkedinUrl}
+                onChange={(e) => setLinkedinUrl(e.target.value)}
+                placeholder="https://linkedin.com/in/username"
+                className="w-full px-4 py-3 bg-white border border-blue-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent"
+              />
+              <button
+                type="button"
+                onClick={handleLinkedInAutofill}
+                disabled={autofillLoading || !linkedinUrl.trim()}
+                className="w-full bg-blue-600 text-white py-3 rounded-xl font-semibold disabled:opacity-50 disabled:cursor-not-allowed active:scale-98 transition-transform flex items-center justify-center gap-2"
+              >
+                {autofillLoading ? (
+                  <>
+                    <div className="animate-spin h-5 w-5 border-2 border-white border-t-transparent rounded-full"></div>
+                    Fetching...
+                  </>
+                ) : (
+                  <>
+                    <Linkedin size={20} />
+                    Autofill from LinkedIn
+                  </>
+                )}
+              </button>
+              <p className="text-xs text-blue-700">
+                Paste a LinkedIn profile URL to automatically import contact details
+              </p>
+            </div>
+          </div>
+
           <div className="flex flex-col items-center">
             <div className="relative">
               <div className="w-28 h-28 rounded-full bg-gradient-to-br from-orange-400 to-pink-500 flex items-center justify-center text-white text-4xl font-semibold overflow-hidden">
