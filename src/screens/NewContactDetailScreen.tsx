@@ -51,13 +51,13 @@ export function NewContactDetailScreen({ contactId, onBack, onEditContact, onAdd
     setGeneratingAI(true);
     setShowAIStarters(true);
 
-    const apiKey = import.meta.env.VITE_OPENAI_API_KEY || import.meta.env.OPENAI_API_KEY;
+    const apiKey = import.meta.env.VITE_OPENAI_API_KEY;
 
     if (!apiKey) {
       await new Promise(resolve => setTimeout(resolve, 1000));
       setAIStarters([
         'AI feature requires an OpenAI API key to be configured.',
-        'Please add OPENAI_API_KEY to your environment variables.',
+        'Please add VITE_OPENAI_API_KEY to your environment variables.',
         'This feature will generate personalized conversation starters based on the contact\'s profile.'
       ]);
       setGeneratingAI(false);

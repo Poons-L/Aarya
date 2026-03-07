@@ -198,7 +198,7 @@ Required:
 - `VITE_SUPABASE_ANON_KEY`: Supabase anon key (auto-configured)
 
 Optional:
-- `OPENAI_API_KEY`: OpenAI API key for AI features (degrades gracefully if missing)
+- `VITE_OPENAI_API_KEY`: OpenAI API key for AI features (degrades gracefully if missing)
 
 ## Production Ready Checklist ✅
 
@@ -234,7 +234,7 @@ Optional:
 ## Getting Started
 
 1. The app is ready to use with pre-configured Supabase
-2. (Optional) Add `OPENAI_API_KEY` to `.env` for AI features
+2. (Optional) Add `VITE_OPENAI_API_KEY` to `.env` for AI features
 3. Run `npm run dev` to start development server
 4. Run `npm run build` to build for production
 
