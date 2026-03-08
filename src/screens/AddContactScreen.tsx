@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { ArrowLeft, Camera, User, Building2, Mail, Phone, MapPin, Tag, AlertCircle, Smartphone, Home } from 'lucide-react';
 import { useContacts } from '../hooks/useContacts';
 import { FollowUpModal } from '../components/FollowUpModal';
+import { supabase } from '../lib/supabase';
 
 interface AddContactScreenProps {
   onBack: () => void;
@@ -18,6 +19,7 @@ export function AddContactScreen({ onBack, onSave, onHome }: AddContactScreenPro
   const [error, setError] = useState<string | null>(null);
   const [showFollowUpModal, setShowFollowUpModal] = useState(false);
   const [savedContactName, setSavedContactName] = useState('');
+  const [scanningCard, setScanningCard] = useState(false);
   const [formData, setFormData] = useState({
     name: '',
     company: '',
@@ -72,6 +74,136 @@ export function AddContactScreen({ onBack, onSave, onHome }: AddContactScreenPro
     }
   };
 
+  const handleBusinessCardScan = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setScanningCard(true);
+    try {
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onloadend = async () => {
+        const imageData = reader.result as string;
+
+        const { data: ocrData, error: ocrError } = await supabase.functions.invoke('process-ocr', {
+          body: { imageData }
+        });
+
+        if (ocrError) throw ocrError;
+
+        const extractedText = ocrData?.text || '';
+
+        const { data: smartData, error: smartError } = await supabase.functions.invoke('smart-paste', {
+          body: { text: extractedText }
+        });
+
+        if (smartError) throw smartError;
+
+        if (smartData?.success && smartData?.data) {
+          const contactData = smartData.data;
+          const firstName = contactData.first_name || '';
+          const lastName = contactData.last_name || '';
+          const fullName = [firstName, lastName].filter(Boolean).join(' ');
+
+          setFormData({
+            name: fullName || '',
+            company: contactData.company || '',
+            title: contactData.job_title || '',
+            email: contactData.email || '',
+            phone: contactData.phone || '',
+            metAt: contactData.location || '',
+            tags: '',
+            conversation: '',
+            notes: contactData.notes || ''
+          });
+        }
+
+        setCaptureMethod('manual');
+      };
+    } catch (error) {
+      console.error('Error scanning business card:', error);
+      alert('Failed to scan business card. Please try entering details manually.');
+      setCaptureMethod('manual');
+    } finally {
+      setScanningCard(false);
+    }
+  };
+
+  const handleVCFImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    try {
+      const text = await file.text();
+      const vcfData = parseVCF(text);
+
+      setFormData({
+        name: vcfData.name || '',
+        company: vcfData.company || '',
+        title: vcfData.title || '',
+        email: vcfData.email || '',
+        phone: vcfData.phone || '',
+        metAt: '',
+        tags: '',
+        conversation: '',
+        notes: vcfData.notes || ''
+      });
+
+      setCaptureMethod('manual');
+    } catch (error) {
+      console.error('Error importing VCF:', error);
+      alert('Failed to import vCard. Please check the file format.');
+    }
+  };
+
+  const parseVCF = (vcfText: string) => {
+    const lines = vcfText.split(/\r?\n/);
+    const data: any = {};
+
+    lines.forEach(line => {
+      if (line.startsWith('FN:')) {
+        data.name = line.substring(3).trim();
+      } else if (line.startsWith('N:')) {
+        const parts = line.substring(2).split(';');
+        if (!data.name && parts.length >= 2) {
+          data.name = `${parts[1]} ${parts[0]}`.trim();
+        }
+      } else if (line.startsWith('ORG:')) {
+        data.company = line.substring(4).trim();
+      } else if (line.startsWith('TITLE:')) {
+        data.title = line.substring(6).trim();
+      } else if (line.startsWith('EMAIL')) {
+        const emailMatch = line.match(/:(.*)/);
+        if (emailMatch && !data.email) {
+          data.email = emailMatch[1].trim();
+        }
+      } else if (line.startsWith('TEL')) {
+        const telMatch = line.match(/:(.*)/);
+        if (telMatch && !data.phone) {
+          data.phone = telMatch[1].trim();
+        }
+      } else if (line.startsWith('NOTE:')) {
+        data.notes = line.substring(5).trim();
+      }
+    });
+
+    return data;
+  };
+
+  if (scanningCard) {
+    return (
+      <div className="h-full bg-white flex flex-col items-center justify-center">
+        <div className="text-center px-6">
+          <div className="w-20 h-20 bg-gradient-to-br from-orange-500 to-pink-500 rounded-full flex items-center justify-center mx-auto mb-6 animate-pulse">
+            <Camera size={40} className="text-white" />
+          </div>
+          <h2 className="text-2xl font-bold text-slate-900 mb-2">Scanning Business Card...</h2>
+          <p className="text-slate-600">Extracting contact information using AI</p>
+        </div>
+      </div>
+    );
+  }
+
   if (!captureMethod) {
     return (
       <div className="h-full bg-white flex flex-col">
@@ -111,10 +243,7 @@ export function AddContactScreen({ onBack, onSave, onHome }: AddContactScreenPro
               <div className="text-orange-100 text-sm">Capture their face to remember them</div>
             </button>
 
-            <button
-              onClick={() => setCaptureMethod('card')}
-              className="w-full bg-white border-2 border-slate-200 rounded-2xl p-6 active:bg-slate-50 transition-colors text-left"
-            >
+            <label className="w-full bg-white border-2 border-slate-200 rounded-2xl p-6 active:bg-slate-50 transition-colors text-left cursor-pointer block">
               <div className="w-10 h-10 bg-amber-100 rounded-xl flex items-center justify-center mb-3">
                 <svg className="w-6 h-6 text-orange-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
@@ -122,7 +251,30 @@ export function AddContactScreen({ onBack, onSave, onHome }: AddContactScreenPro
               </div>
               <div className="font-bold text-lg mb-1 text-slate-900">Scan Business Card</div>
               <div className="text-slate-600 text-sm">Auto-extract contact information</div>
-            </button>
+              <input
+                type="file"
+                accept="image/*"
+                capture="environment"
+                onChange={handleBusinessCardScan}
+                className="hidden"
+              />
+            </label>
+
+            <label className="w-full bg-white border-2 border-slate-200 rounded-2xl p-6 active:bg-slate-50 transition-colors text-left cursor-pointer block">
+              <div className="w-10 h-10 bg-purple-100 rounded-xl flex items-center justify-center mb-3">
+                <svg className="w-6 h-6 text-purple-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                </svg>
+              </div>
+              <div className="font-bold text-lg mb-1 text-slate-900">Import vCard (VCF)</div>
+              <div className="text-slate-600 text-sm">Upload a contact file</div>
+              <input
+                type="file"
+                accept=".vcf,.vcard"
+                onChange={handleVCFImport}
+                className="hidden"
+              />
+            </label>
 
             <button
               onClick={() => setCaptureMethod('manual')}

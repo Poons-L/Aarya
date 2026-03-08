@@ -1,6 +1,7 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { ArrowLeft, Camera, Mic, StopCircle } from 'lucide-react';
 import { useContacts } from '../hooks/useContacts';
+import { supabase } from '../lib/supabase';
 
 interface QuickCaptureScreenProps {
   onBack: () => void;
@@ -14,6 +15,9 @@ export function QuickCaptureScreen({ onBack, onComplete }: QuickCaptureScreenPro
   const [photoPreview, setPhotoPreview] = useState('');
   const [note, setNote] = useState('');
   const [isRecording, setIsRecording] = useState(false);
+  const [transcribing, setTranscribing] = useState(false);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const audioChunksRef = useRef<Blob[]>([]);
 
   const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -26,13 +30,66 @@ export function QuickCaptureScreen({ onBack, onComplete }: QuickCaptureScreenPro
     }
   };
 
-  const toggleRecording = () => {
-    setIsRecording(!isRecording);
+  const toggleRecording = async () => {
     if (!isRecording) {
-      setTimeout(() => {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        const mediaRecorder = new MediaRecorder(stream);
+        mediaRecorderRef.current = mediaRecorder;
+        audioChunksRef.current = [];
+
+        mediaRecorder.ondataavailable = (event) => {
+          if (event.data.size > 0) {
+            audioChunksRef.current.push(event.data);
+          }
+        };
+
+        mediaRecorder.onstop = async () => {
+          stream.getTracks().forEach(track => track.stop());
+          const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
+          await transcribeAudio(audioBlob);
+        };
+
+        mediaRecorder.start();
+        setIsRecording(true);
+      } catch (error) {
+        console.error('Error starting recording:', error);
+        alert('Failed to access microphone. Please grant permission and try again.');
+      }
+    } else {
+      if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+        mediaRecorderRef.current.stop();
         setIsRecording(false);
-        setNote('Voice note recorded (transcription would appear here in production)');
-      }, 3000);
+      }
+    }
+  };
+
+  const transcribeAudio = async (audioBlob: Blob) => {
+    setTranscribing(true);
+    try {
+      const reader = new FileReader();
+      reader.readAsDataURL(audioBlob);
+      reader.onloadend = async () => {
+        const base64Audio = reader.result?.toString().split(',')[1];
+        if (!base64Audio) {
+          throw new Error('Failed to convert audio');
+        }
+
+        const { data, error } = await supabase.functions.invoke('transcribe-audio', {
+          body: { audioData: base64Audio, language: 'en' }
+        });
+
+        if (error) throw error;
+
+        if (data?.transcript) {
+          setNote(prev => prev ? `${prev}\n\n${data.transcript}` : data.transcript);
+        }
+      };
+    } catch (error) {
+      console.error('Error transcribing audio:', error);
+      alert('Failed to transcribe audio. Please try typing instead.');
+    } finally {
+      setTranscribing(false);
     }
   };
 
@@ -128,16 +185,24 @@ export function QuickCaptureScreen({ onBack, onComplete }: QuickCaptureScreenPro
               <button
                 type="button"
                 onClick={toggleRecording}
-                className={`w-full flex items-center justify-center gap-2 py-3 rounded-xl font-medium transition-all ${
+                disabled={transcribing}
+                className={`w-full flex items-center justify-center gap-2 py-3 rounded-xl font-medium transition-all disabled:opacity-50 ${
                   isRecording
                     ? 'bg-red-500 text-white animate-pulse'
+                    : transcribing
+                    ? 'bg-slate-400 text-white'
                     : 'bg-gradient-to-r from-orange-500 to-pink-500 text-white'
                 } active:scale-98`}
               >
-                {isRecording ? (
+                {transcribing ? (
+                  <>
+                    <Mic size={20} className="animate-spin" />
+                    Transcribing...
+                  </>
+                ) : isRecording ? (
                   <>
                     <StopCircle size={20} />
-                    Recording...
+                    Stop Recording
                   </>
                 ) : (
                   <>
@@ -149,6 +214,11 @@ export function QuickCaptureScreen({ onBack, onComplete }: QuickCaptureScreenPro
               {isRecording && (
                 <p className="text-xs text-slate-500 text-center">
                   Speak clearly. Tap Stop when finished.
+                </p>
+              )}
+              {transcribing && (
+                <p className="text-xs text-slate-500 text-center">
+                  Processing your voice note...
                 </p>
               )}
             </div>
@@ -166,7 +236,7 @@ export function QuickCaptureScreen({ onBack, onComplete }: QuickCaptureScreenPro
         <button
           type="submit"
           onClick={handleSubmit}
-          disabled={loading || !name.trim() || isRecording}
+          disabled={loading || !name.trim() || isRecording || transcribing}
           className="w-full bg-gradient-to-r from-orange-500 to-pink-500 text-white py-4 rounded-xl font-semibold text-lg disabled:opacity-50 disabled:cursor-not-allowed active:scale-98 transition-transform"
         >
           {loading ? 'Saving...' : 'Save Contact'}
