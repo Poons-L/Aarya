@@ -79,6 +79,17 @@ Deno.serve(async (req: Request) => {
 
     const contactData: ContactData = await req.json();
 
+    console.log('📥 [Generate Starters] Received contact data:', {
+      contactId: contactData.contactId,
+      name: contactData.name,
+      hasNotes: !!contactData.notes,
+      notesLength: contactData.notes?.length || 0,
+      notesPreview: contactData.notes ? contactData.notes.substring(0, 100) : null,
+      hasInteractionHistory: !!contactData.interaction_history,
+      interactionCount: contactData.interaction_history?.length || 0,
+      hasLinkedIn: !!contactData.linkedin_url,
+    });
+
     if (!contactData.contactId) {
       return new Response(
         JSON.stringify({ error: "Contact ID required" }),
@@ -234,6 +245,7 @@ Deno.serve(async (req: Request) => {
         contactData.interaction_history.length > 0) {
 
       contextSource = 'interaction_history';
+      console.log('✅ [Generate Starters] Using context_source: interaction_history (found', contactData.interaction_history.length, 'interactions)');
 
       // Extract last 3 interactions with timestamps and specific details
       const recentInteractions = contactData.interaction_history
@@ -280,6 +292,7 @@ Requirements:
     } else if (contactData.notes && contactData.notes.trim().length > 0) {
 
       contextSource = 'notes';
+      console.log('✅ [Generate Starters] Using context_source: notes (length:', contactData.notes.length, 'chars)');
 
       systemPrompt = `You are helping someone send a WhatsApp or Signal message to a peer.
 
@@ -309,6 +322,7 @@ Requirements:
     } else if (contactData.linkedin_url && contactData.linkedin_url.trim().length > 0) {
 
       contextSource = 'linkedin';
+      console.log('✅ [Generate Starters] Using context_source: linkedin');
 
       systemPrompt = `You are helping someone send a WhatsApp or Signal message to a peer.
 
@@ -336,6 +350,7 @@ Requirements:
     } else {
 
       contextSource = 'fallback';
+      console.log('✅ [Generate Starters] Using context_source: fallback (no interaction history, notes, or LinkedIn)');
 
       systemPrompt = `You are helping someone send a WhatsApp or Signal message to a peer.
 

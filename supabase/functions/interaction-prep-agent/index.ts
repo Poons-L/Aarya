@@ -98,7 +98,10 @@ Deno.serve(async (req: Request) => {
 
     console.log('✅ [Interaction Prep] Using contact from UI:', {
       id: contact.id,
-      name: contact.name
+      name: contact.name,
+      hasNotes: !!contact.notes,
+      notesLength: contact.notes?.length || 0,
+      hasLinkedIn: !!contact.linkedin_url,
     });
 
     const interactions = await getRecentInteractions(requestData.contact_id, 3);
@@ -106,10 +109,12 @@ Deno.serve(async (req: Request) => {
 
     let startersResponse;
     try {
+      // Pass the contact data directly to avoid DB lookup issues
       startersResponse = await generateConversationStarters(
         requestData.contact_id,
         authHeader,
-        false
+        false,
+        contact
       );
     } catch (error) {
       console.error("Error generating starters:", error);

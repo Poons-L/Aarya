@@ -183,6 +183,16 @@ export function NewContactDetailScreen({ contactId, onBack, onEditContact, onAdd
     });
   };
 
+  const getContextSourceLabel = (source: string): string => {
+    const labels: Record<string, string> = {
+      'interaction_history': 'History',
+      'notes': 'Notes',
+      'linkedin': 'LinkedIn',
+      'fallback': 'Fallback'
+    };
+    return labels[source] || source;
+  };
+
   const handleSendEmail = () => {
     if (!contact.email) return;
     const mailto = createMailtoLink(contact.email, `Following up`, `Hi ${contact.name.split(' ')[0]},\n\n`);
@@ -334,8 +344,8 @@ export function NewContactDetailScreen({ contactId, onBack, onEditContact, onAdd
                   <h3 className="font-semibold text-purple-900">Interaction Prep</h3>
                 </div>
                 {contextSource && (
-                  <div className="text-xs text-purple-600 bg-purple-100 px-2 py-1 rounded-full capitalize">
-                    {contextSource.replace(/_/g, ' ')}
+                  <div className="text-xs text-purple-600 bg-purple-100 px-2 py-1 rounded-full">
+                    {getContextSourceLabel(contextSource)}
                   </div>
                 )}
               </div>

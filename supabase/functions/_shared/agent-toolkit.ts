@@ -112,14 +112,28 @@ export interface ConversationStartersResponse {
 export async function generateConversationStarters(
   contactId: string,
   authToken: string,
-  forceRefresh: boolean = false
+  forceRefresh: boolean = false,
+  contactData?: Contact
 ): Promise<ConversationStartersResponse> {
-  const contact = await getContact(contactId);
+  // Use provided contact data or fetch from DB
+  const contact = contactData || await getContact(contactId);
   if (!contact) {
     throw new Error("Contact not found");
   }
 
   const interactions = await getRecentInteractions(contactId, 3);
+
+  // Log the context data being sent for verification
+  console.log('📤 [Toolkit] Sending to generate-conversation-starters:', {
+    contactId,
+    name: contact.name,
+    hasNotes: !!contact.notes,
+    notesLength: contact.notes?.length || 0,
+    notesPreview: contact.notes ? contact.notes.substring(0, 100) : null,
+    hasInteractionHistory: interactions.length > 0,
+    interactionCount: interactions.length,
+    hasLinkedIn: !!contact.linkedin_url,
+  });
 
   const response = await fetch(
     `${supabaseUrl}/functions/v1/generate-conversation-starters`,
@@ -152,6 +166,13 @@ export async function generateConversationStarters(
   }
 
   const data = await response.json();
+
+  console.log('📥 [Toolkit] Received from generate-conversation-starters:', {
+    context_source: data.context_source,
+    starterCount: data.starters?.length || 0,
+    cached: data.cached,
+  });
+
   return {
     starters: data.starters || [],
     context_source: data.context_source || 'fallback',
