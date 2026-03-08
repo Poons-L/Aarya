@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { ArrowLeft, Mail, Phone, Linkedin, MapPin, Calendar, Tag, Pencil, MessageCircle, Sparkles, Plus, Clock, Send, ExternalLink, CalendarPlus, Download, User, ChevronDown } from 'lucide-react';
+import { useState, useRef } from 'react';
+import { ArrowLeft, Mail, Phone, Linkedin, MapPin, Calendar, Tag, Pencil, MessageCircle, Sparkles, Plus, Clock, Send, ExternalLink, CalendarPlus, Download, User, ChevronDown, Mic, MicOff } from 'lucide-react';
 import { useContacts } from '../hooks/useContacts';
 import { useAuth } from '../contexts/AuthContext';
 import { downloadVCard, generateHubSpotCSV, generateSalesforceCSV, downloadCSV, createMailtoLink, createCalendarEvent } from '../utils/contactExport';
@@ -31,6 +31,11 @@ export function NewContactDetailScreen({ contactId, onBack, onEditContact, onAdd
   const [newInteraction, setNewInteraction] = useState('');
   const [showAddInteraction, setShowAddInteraction] = useState(false);
   const [showCRMExport, setShowCRMExport] = useState(false);
+  const [userContextNote, setUserContextNote] = useState('');
+  const [isRecording, setIsRecording] = useState(false);
+  const [isTranscribing, setIsTranscribing] = useState(false);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const audioChunksRef = useRef<Blob[]>([]);
 
   console.log('NewContactDetailScreen rendered with contactId:', contactId);
   console.log('Contacts array length:', contacts.length);
@@ -59,6 +64,77 @@ export function NewContactDetailScreen({ contactId, onBack, onEditContact, onAdd
 
   const interactionHistory = contact.interaction_history || [];
 
+  const startRecording = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const mediaRecorder = new MediaRecorder(stream);
+      mediaRecorderRef.current = mediaRecorder;
+      audioChunksRef.current = [];
+
+      mediaRecorder.ondataavailable = (event) => {
+        if (event.data.size > 0) {
+          audioChunksRef.current.push(event.data);
+        }
+      };
+
+      mediaRecorder.onstop = async () => {
+        const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
+        stream.getTracks().forEach(track => track.stop());
+        await transcribeAudio(audioBlob);
+      };
+
+      mediaRecorder.start();
+      setIsRecording(true);
+    } catch (error) {
+      console.error('Error starting recording:', error);
+      alert('Could not access microphone. Please check permissions.');
+    }
+  };
+
+  const stopRecording = () => {
+    if (mediaRecorderRef.current && isRecording) {
+      mediaRecorderRef.current.stop();
+      setIsRecording(false);
+    }
+  };
+
+  const transcribeAudio = async (audioBlob: Blob) => {
+    setIsTranscribing(true);
+    try {
+      if (!session?.access_token) {
+        alert('Please sign in to use voice transcription.');
+        return;
+      }
+
+      const formData = new FormData();
+      formData.append('file', audioBlob, 'recording.webm');
+
+      const apiUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/transcribe-audio`;
+      const response = await fetch(apiUrl, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${session.access_token}`,
+        },
+        body: formData
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        if (data.text) {
+          setUserContextNote(prev => prev ? `${prev} ${data.text}` : data.text);
+        }
+      } else {
+        console.error('Transcription failed:', await response.text());
+        alert('Transcription failed. Please try again.');
+      }
+    } catch (error) {
+      console.error('Error transcribing audio:', error);
+      alert('Error transcribing audio. Please try again.');
+    } finally {
+      setIsTranscribing(false);
+    }
+  };
+
   const generateAIStarters = async (forceRefresh = false) => {
     setGeneratingAI(true);
     setShowAIStarters(true);
@@ -74,13 +150,14 @@ export function NewContactDetailScreen({ contactId, onBack, onEditContact, onAdd
 
       const requestData = {
         contact_id: contact.id,
-        contact: contact, // Send full contact object as fallback
+        contact: contact,
         context: {
           context_type: "generic_checkin" as const,
           title: contact.name,
           datetime: new Date().toISOString(),
           channel: null
-        }
+        },
+        user_context_note: userContextNote.trim() || undefined
       };
 
       console.log('🔍 [AI Prep] Contact object:', {
@@ -312,6 +389,47 @@ export function NewContactDetailScreen({ contactId, onBack, onEditContact, onAdd
           )}
 
           <div className="mb-4">
+            <div className="bg-white rounded-2xl p-4 shadow-sm border border-slate-200 mb-4">
+              <label className="block text-sm font-semibold text-slate-700 mb-2">
+                Add context for this interaction (optional)
+              </label>
+              <div className="flex gap-2">
+                <textarea
+                  value={userContextNote}
+                  onChange={(e) => setUserContextNote(e.target.value)}
+                  placeholder="E.g., I want to run a new idea by them and get feedback..."
+                  className="flex-1 px-3 py-2 border border-slate-300 rounded-lg text-sm resize-none focus:outline-none focus:ring-2 focus:ring-purple-500"
+                  rows={2}
+                  disabled={isRecording || isTranscribing}
+                />
+                <button
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    if (isRecording) {
+                      stopRecording();
+                    } else {
+                      startRecording();
+                    }
+                  }}
+                  disabled={isTranscribing}
+                  className={`p-3 rounded-lg transition-all ${
+                    isRecording
+                      ? 'bg-red-500 text-white animate-pulse'
+                      : isTranscribing
+                      ? 'bg-slate-300 text-slate-500'
+                      : 'bg-purple-500 text-white active:scale-95'
+                  } disabled:opacity-50`}
+                  title={isRecording ? 'Stop recording' : isTranscribing ? 'Transcribing...' : 'Start voice recording'}
+                >
+                  {isRecording ? <MicOff size={20} /> : <Mic size={20} />}
+                </button>
+              </div>
+              {isTranscribing && (
+                <p className="text-xs text-purple-600 mt-1">Transcribing audio...</p>
+              )}
+            </div>
+
             <button
               onClick={(e) => {
                 e.preventDefault();

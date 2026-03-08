@@ -38,6 +38,7 @@ interface InteractionPrepRequest {
     datetime?: string | null;
     channel?: ChannelType;
   };
+  user_context_note?: string;
 }
 
 Deno.serve(async (req: Request) => {
@@ -79,7 +80,9 @@ Deno.serve(async (req: Request) => {
       contact_id: requestData.contact_id,
       contact_name: requestData.contact?.name,
       user_id: user.id,
-      context: requestData.context
+      context: requestData.context,
+      hasUserContextNote: !!requestData.user_context_note,
+      userContextNotePreview: requestData.user_context_note ? requestData.user_context_note.substring(0, 50) : null
     });
 
     if (!requestData.contact_id || !requestData.contact) {
@@ -114,7 +117,8 @@ Deno.serve(async (req: Request) => {
         requestData.contact_id,
         authHeader,
         false,
-        contact
+        contact,
+        requestData.user_context_note
       );
     } catch (error) {
       console.error("Error generating starters:", error);

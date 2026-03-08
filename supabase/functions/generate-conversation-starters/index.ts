@@ -24,6 +24,7 @@ interface ContactData {
   last_contacted?: string;
   contactId?: string;
   forceRefresh?: boolean;
+  user_context_note?: string;
   interaction_history?: Array<{
     date: string;
     note: string;
@@ -88,6 +89,8 @@ Deno.serve(async (req: Request) => {
       hasInteractionHistory: !!contactData.interaction_history,
       interactionCount: contactData.interaction_history?.length || 0,
       hasLinkedIn: !!contactData.linkedin_url,
+      hasUserContextNote: !!contactData.user_context_note,
+      userContextNotePreview: contactData.user_context_note ? contactData.user_context_note.substring(0, 50) : null,
     });
 
     if (!contactData.contactId) {
@@ -263,15 +266,33 @@ Deno.serve(async (req: Request) => {
           return `[${timeRef}] ${interaction.note}`;
         });
 
-      systemPrompt = `You are helping someone send a WhatsApp or Signal message to a peer.
+      systemPrompt = `You are Re.Me, a personal networking memory that writes WhatsApp-style openers.
 
-CRITICAL RULES:
-- Write like you're texting a colleague or friend — casual, warm, direct
-- NEVER use corporate jargon, formal language, or phrases like "Hope you're well" or "I trust this finds you"
-- Quote or reference a SPECIFIC moment, project name, event, location, or topic from the interaction history
-- Each starter must be under 2 sentences
-- Tone: human, curious, conversational — NOT salesy or formal
-- Return ONLY 3 starters, one per line, no numbers or bullets`;
+General rules:
+- Write like a human texting a peer, not a salesperson
+- Avoid clichés like "Hope you are well" or corporate jargon
+- Always produce exactly 3 starters, each under 2 sentences
+- Tone: warm, specific, curious, non-salesy
+
+You receive:
+- contact_name
+- interaction_history (last 1-3 interactions with timestamps)
+- optional notes (informal memory from the user)
+- optional linkedin_url/role context
+- optional user_context_note (what the user just said they want to focus on now)
+- context_source = interaction_history
+
+For context_source = "interaction_history":
+- Read the last 1-3 interactions carefully
+- Extract 2-3 specific details (projects, topics, events, locations, people mentioned)
+- Each starter MUST reference at least one of those concrete details
+- If they mentioned a challenge, project, meeting, or event, follow up on it naturally
+- Write like you're texting on WhatsApp — keep it real and conversational
+- Each starter should feel like you genuinely remember what you discussed
+${contactData.user_context_note ? `
+IMPORTANT: user_context_note is present. You MUST strongly consider this when writing starters.
+At least one starter should directly reflect what the user wants to do this time while staying natural.
+Combine the interaction history details with the current intent from user_context_note.` : ''}`;
 
       prompt = `Generate 3 conversation starters to follow up with ${contactData.name}.
 
@@ -280,13 +301,13 @@ ${recentInteractions.join("\n")}
 
 Supporting context:
 ${secondaryContext.join("\n")}
+${contactData.user_context_note ? `\nUSER'S CURRENT INTENT (what they want to do this time):\n${contactData.user_context_note}` : ''}
 
 Requirements:
 - Reference something SPECIFIC from the most recent interaction
-- If they mentioned a challenge, project, meeting, or event, follow up on it naturally
-- Write like you're texting on WhatsApp — keep it real and conversational
-- Each starter should feel like you genuinely remember what you discussed
-- NO generic corporate language`;
+- Write like you're texting on WhatsApp — natural and conversational
+- NO generic corporate language
+${contactData.user_context_note ? '- At least one starter must reflect the user\'s current intent while staying natural' : ''}`;
 
     // RULE 2: Notes only (no interaction history)
     } else if (contactData.notes && contactData.notes.trim().length > 0) {
@@ -294,29 +315,49 @@ Requirements:
       contextSource = 'notes';
       console.log('✅ [Generate Starters] Using context_source: notes (length:', contactData.notes.length, 'chars)');
 
-      systemPrompt = `You are helping someone send a WhatsApp or Signal message to a peer.
+      systemPrompt = `You are Re.Me, a personal networking memory that writes WhatsApp-style openers.
 
-CRITICAL RULES:
-- Write like you're texting a colleague or friend — casual, warm, direct
-- NEVER use phrases like "Hope you're well", "I trust this finds you", or other corporate filler
-- Reference CONCRETE details from the notes: specific events, places, interests, projects
-- Each starter must be under 2 sentences
-- Tone: human, curious, conversational — NOT formal or salesy
-- Return ONLY 3 starters, one per line, no numbers or bullets`;
+General rules:
+- Write like a human texting a peer, not a salesperson
+- Avoid clichés like "Hope you are well" or corporate jargon
+- Always produce exactly 3 starters, each under 2 sentences
+- Tone: warm, specific, curious, non-salesy
+
+You receive:
+- contact_name
+- notes (informal memory/brain dump from the user)
+- optional title/company context
+- optional user_context_note (what the user just said they want to focus on now)
+- context_source = notes
+
+For context_source = "notes":
+- Treat notes as a rough brain dump
+- Extract: how they know each other, what the other person does now (role/company), what the user wants (advice, tips, intro, collaboration)
+- Even if notes are short, make safe, reasonable inferences from role/company + relationship
+- Each starter MUST mention at least one specific detail from the notes (e.g., past company, current role, what you want to learn)
+- Reference concrete details: specific events, places, interests, projects, past work history
+- Write like you're texting on WhatsApp — keep it authentic
+- Show you remember specific things about them
+${contactData.user_context_note ? `
+IMPORTANT: user_context_note is present. You MUST strongly consider this when writing starters.
+At least one starter should directly reflect what the user wants to do this time while staying natural.
+Combine the notes details with the current intent from user_context_note.` : ''}`;
 
       prompt = `Generate 3 conversation starters for ${contactData.name}.
 
-NOTES (base starters purely on this):
+NOTES (base starters on these details):
 ${contactData.notes}
 
 Supporting context:
 ${secondaryContext.join("\n")}
+${contactData.user_context_note ? `\nUSER'S CURRENT INTENT (what they want to do this time):\n${contactData.user_context_note}` : ''}
 
 Requirements:
-- Pull SPECIFIC details from the notes (event names, topics, locations, shared interests)
-- Write like you're texting on WhatsApp — keep it authentic
-- Show you remember specific things about them
-- NO corporate speak or generic openers`;
+- Pull SPECIFIC details from the notes (event names, past companies like SAP, current companies like Google, roles, what you want from them)
+- Write like you're texting on WhatsApp — natural and conversational
+- Show you remember specific details about your history and what they're doing now
+- NO corporate speak or generic openers
+${contactData.user_context_note ? '- At least one starter must reflect the user\'s current intent while staying natural' : ''}`;
 
     // RULE 3: LinkedIn URL (infer from profile)
     } else if (contactData.linkedin_url && contactData.linkedin_url.trim().length > 0) {
@@ -324,27 +365,44 @@ Requirements:
       contextSource = 'linkedin';
       console.log('✅ [Generate Starters] Using context_source: linkedin');
 
-      systemPrompt = `You are helping someone send a WhatsApp or Signal message to a peer.
+      systemPrompt = `You are Re.Me, a personal networking memory that writes WhatsApp-style openers.
 
-CRITICAL RULES:
-- Write like you're texting a colleague — casual, warm, direct
-- NEVER use phrases like "Hope you're well" or "I trust this message finds you"
-- Reference their ACTUAL role, company, or a recent professional achievement naturally
-- Each starter must be under 2 sentences
-- Tone: human, curious, peer-to-peer — NOT formal recruitment or sales language
-- Return ONLY 3 starters, one per line, no numbers or bullets`;
+General rules:
+- Write like a human texting a peer, not a salesperson
+- Avoid clichés like "Hope you are well" or corporate jargon
+- Always produce exactly 3 starters, each under 2 sentences
+- Tone: warm, specific, curious, non-salesy
+
+You receive:
+- contact_name
+- title/company context
+- linkedin_url
+- optional user_context_note (what the user just said they want to focus on now)
+- context_source = linkedin
+
+For context_source = "linkedin":
+- Use role, seniority, company, headline
+- Mention something natural (their role, what they lead, an obvious focus) in the starters
+- Reference their ACTUAL role or company in a natural, curious way
+- Write like you're texting on WhatsApp — genuine peer-to-peer tone
+- Ask about their work or recent moves without sounding like a recruiter
+${contactData.user_context_note ? `
+IMPORTANT: user_context_note is present. You MUST strongly consider this when writing starters.
+At least one starter should directly reflect what the user wants to do this time while staying natural.` : ''}`;
 
       prompt = `Generate 3 conversation starters for ${contactData.name}.
 
 Context:
 ${secondaryContext.join("\n")}
 LinkedIn: ${contactData.linkedin_url}
+${contactData.user_context_note ? `\nUSER'S CURRENT INTENT (what they want to do this time):\n${contactData.user_context_note}` : ''}
 
 Requirements:
 - Reference their current role or company in a natural, curious way
 - Write like you're texting on WhatsApp — genuine peer-to-peer tone
-- Ask about their work or recent moves without sounding like a recruiter
-- NO corporate language or formal phrases`;
+- Ask about their work without sounding like a recruiter
+- NO corporate language or formal phrases
+${contactData.user_context_note ? '- At least one starter must reflect the user\'s current intent while staying natural' : ''}`;
 
     // RULE 4: Fallback (minimal context)
     } else {
@@ -352,28 +410,46 @@ Requirements:
       contextSource = 'fallback';
       console.log('✅ [Generate Starters] Using context_source: fallback (no interaction history, notes, or LinkedIn)');
 
-      systemPrompt = `You are helping someone send a WhatsApp or Signal message to a peer.
+      systemPrompt = `You are Re.Me, a personal networking memory that writes WhatsApp-style openers.
 
-CRITICAL RULES:
-- Write like you're texting a colleague or friend — casual, warm, direct
-- NEVER use phrases like "Hope you're well" or "Long time no talk"
+General rules:
+- Write like a human texting a peer, not a salesperson
+- Avoid clichés like "Hope you are well" or corporate jargon
+- Always produce exactly 3 starters, each under 2 sentences
+- Tone: warm, specific, curious, non-salesy
+
+You receive:
+- contact_name
+- minimal context (maybe title/company)
+- optional user_context_note (what the user just said they want to focus on now)
+- context_source = fallback
+
+For context_source = "fallback":
+- Assume warm but low-context reconnect
+- Write 3 simple, friendly openers that don't pretend you remember specific details
 - Keep it warm but not overly familiar since you don't have detailed context
-- Each starter must be under 2 sentences
-- Tone: human, curious, peer-level — NOT formal or salesy
-- Return ONLY 3 starters, one per line, no numbers or bullets`;
+- Reference their title/company if available, but keep it natural
+${contactData.user_context_note ? `
+IMPORTANT: user_context_note is present. You MUST strongly consider this when writing starters.
+At least one starter should directly reflect what the user wants to do this time while staying natural.` : ''}`;
 
       prompt = `Generate 3 warm conversation starters to reconnect with ${contactData.name}.
 
 Context:
 ${secondaryContext.join("\n")}
+${contactData.user_context_note ? `\nUSER'S CURRENT INTENT (what they want to do this time):\n${contactData.user_context_note}` : ''}
 
 Requirements:
 - Create genuine, warm reconnection messages
 - Write like you're texting on WhatsApp — natural and human
 - Reference their ${contactData.title || "work"} ${contactData.company ? `at ${contactData.company}` : ""} if available
 - Keep it friendly and curious without being overly personal
-- NO corporate speak or generic templates`;
+- NO corporate speak or generic templates
+${contactData.user_context_note ? '- At least one starter must reflect the user\'s current intent while staying natural' : ''}`;
     }
+
+    const modelName = "gpt-4o";
+    console.log(`🤖 [Generate Starters] Using model: ${modelName}`);
 
     const response = await fetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",
@@ -382,7 +458,7 @@ Requirements:
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "gpt-3.5-turbo",
+        model: modelName,
         messages: [
           {
             role: "system",
@@ -394,7 +470,7 @@ Requirements:
           },
         ],
         temperature: 0.8,
-        max_tokens: 250,
+        max_tokens: 300,
       }),
     });
 
