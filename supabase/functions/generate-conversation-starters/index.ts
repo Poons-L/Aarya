@@ -202,31 +202,83 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    const contextParts = [
+    // Build context with priority hierarchy: Notes > LinkedIn > Other info
+    const hasNotes = contactData.notes && contactData.notes.trim().length > 0;
+    const hasLinkedIn = contactData.linkedin_url && contactData.linkedin_url.trim().length > 0;
+    const hasInterests = contactData.interests && contactData.interests.length > 0;
+
+    // Primary context - what matters most
+    const primaryContext: string[] = [];
+    if (hasNotes) {
+      primaryContext.push(`Recent Notes/Topics: ${contactData.notes}`);
+    }
+    if (hasLinkedIn) {
+      primaryContext.push(`LinkedIn: ${contactData.linkedin_url}`);
+    }
+    if (hasInterests) {
+      primaryContext.push(`Interests: ${contactData.interests.join(", ")}`);
+    }
+
+    // Secondary context - supporting information
+    const secondaryContext = [
       `Name: ${contactData.name}`,
       contactData.title ? `Title: ${contactData.title}` : "",
       contactData.company ? `Company: ${contactData.company}` : "",
-      contactData.relationship ? `Relationship: ${contactData.relationship}` : "",
+      contactData.relationship ? `How you know them: ${contactData.relationship}` : "",
       contactData.tags && contactData.tags.length > 0 ? `Tags: ${contactData.tags.join(", ")}` : "",
-      contactData.interests && contactData.interests.length > 0 ? `Interests: ${contactData.interests.join(", ")}` : "",
-      contactData.linkedin_url ? `LinkedIn: ${contactData.linkedin_url}` : "",
-      contactData.notes ? `Notes: ${contactData.notes}` : "",
       contactData.last_contacted ? `Last contacted: ${contactData.last_contacted}` : "",
     ].filter(Boolean);
 
-    const prompt = `Generate 3 thoughtful, specific conversation starters for reconnecting with this contact:
+    // Build intelligent prompt based on available data
+    let prompt = "";
 
-${contextParts.join("\n")}
+    if (hasNotes) {
+      prompt = `Generate 3 natural, conversational starters to reconnect with ${contactData.name}. Focus primarily on the topics and details mentioned in their recent notes.
 
-Requirements:
-- Make them personal and specific to this contact
-- Prioritize using information from their Notes, LinkedIn profile, and Interests to create relevant starters
-- If notes mention specific topics, events, or projects, reference those
-- If interests are listed, incorporate them naturally into conversation starters
-- Keep each starter under 100 characters
-- Focus on genuine connection, not just business
-- Return ONLY 3 starters, one per line
-- Do not number them or add bullet points`;
+${primaryContext.join("\n")}
+
+Supporting context:
+${secondaryContext.join("\n")}
+
+Guidelines:
+- PRIORITIZE referencing specific topics, events, or projects from the Notes section
+- Make it sound like a real person reaching out, not a formal message
+- Use casual, friendly language - avoid corporate speak
+- Each starter should feel personal and show you remember specific details about them
+- Keep under 100 characters each
+- Make them feel authentic and genuine, like catching up with a friend
+- Return ONLY 3 starters, one per line, no numbers or bullets`;
+    } else if (hasLinkedIn || hasInterests) {
+      prompt = `Generate 3 natural, conversational starters to reconnect with ${contactData.name}. ${hasLinkedIn ? "Use their LinkedIn profile information to create relevant, personalized messages." : "Use their interests to craft engaging conversation starters."}
+
+${primaryContext.join("\n")}
+
+Supporting context:
+${secondaryContext.join("\n")}
+
+Guidelines:
+- ${hasLinkedIn ? "Reference their professional background, recent posts, or career moves" : "Incorporate their interests naturally"}
+- Sound like a real person reaching out, not a template
+- Keep it casual and friendly - no corporate jargon
+- Show genuine interest in what they're doing
+- Keep under 100 characters each
+- Make them authentic and human
+- Return ONLY 3 starters, one per line, no numbers or bullets`;
+    } else {
+      prompt = `Generate 3 natural, conversational starters to reconnect with ${contactData.name}.
+
+${secondaryContext.join("\n")}
+
+Guidelines:
+- Since detailed notes aren't available, focus on warm, genuine reconnection messages
+- Reference their ${contactData.title || "work"} ${contactData.company ? `at ${contactData.company}` : ""} if mentioned
+- Sound like a real person reaching out, not a template
+- Keep it casual and friendly
+- Show genuine interest in catching up
+- Keep under 100 characters each
+- Make them feel authentic and human
+- Return ONLY 3 starters, one per line, no numbers or bullets`;
+    }
 
     const response = await fetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",
@@ -240,15 +292,15 @@ Requirements:
           {
             role: "system",
             content:
-              "You are a helpful assistant that generates thoughtful conversation starters for reconnecting with professional and personal contacts.",
+              "You are a thoughtful friend helping someone reconnect with their contacts. Generate conversation starters that sound natural, human, and genuine - like something a real person would text or say. Avoid corporate language, templates, or overly formal phrasing. Be warm, personal, and conversational.",
           },
           {
             role: "user",
             content: prompt,
           },
         ],
-        temperature: 0.7,
-        max_tokens: 200,
+        temperature: 0.8,
+        max_tokens: 250,
       }),
     });
 
