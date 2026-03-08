@@ -51,20 +51,41 @@ This document contains instructions for configuring security settings that must 
 
 ---
 
-## Migration Applied
+## Migrations Applied
 
-The following database optimization has been completed automatically:
+The following database optimizations have been completed automatically:
+
+### Foreign Key Indexes Added ✓
+
+Added 24 missing indexes on foreign key columns across all tables:
+- `ai_usage_logs`: contact_id
+- `contact_events`: contact_id, event_id, session_id
+- `conversation_key_points`: conversation_id
+- `conversations`: contact_id, user_id
+- `events`: user_id
+- `files`: linked_contact_id, linked_memory_id, user_id
+- `meetings`: session_id, user_id
+- `memories`: event_id, linked_contact_id, session_id, user_id
+- `reminders`: contact_id, user_id
+- `session_notes`: session_id, user_id
+- `sessions`: event_id
+- `user_event_preferences`: event_id
+
+**Benefits:**
+- Significantly improved JOIN performance
+- Faster foreign key constraint validation
+- Better query execution plans
+- Enhanced overall database performance
 
 ### Unused Indexes Removed ✓
 
-All unused database indexes have been dropped to improve performance:
-- Faster INSERT, UPDATE, and DELETE operations
-- Reduced storage usage
-- No impact on query performance (indexes were not being used)
+Removed 1 unused index to improve write performance:
+- `idx_ai_usage_logs_user_id` (was not being used by any queries)
 
-**Total indexes removed:** 35
-
-If specific queries become slow in the future, indexes can be selectively re-added based on actual usage patterns.
+**Benefits:**
+- Faster INSERT, UPDATE, and DELETE operations on ai_usage_logs
+- Reduced storage overhead
+- No negative impact on query performance
 
 ---
 
