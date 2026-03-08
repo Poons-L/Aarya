@@ -93,7 +93,7 @@ Deno.serve(async (req: Request) => {
 
     const { data: contact } = await supabase
       .from("contacts")
-      .select("cached_starters, starters_generated_at")
+      .select("cached_starters, starters_generated_at, context_source")
       .eq("id", contactData.contactId)
       .single();
 
@@ -114,6 +114,7 @@ Deno.serve(async (req: Request) => {
           cached: true,
           generatedAt: contact.starters_generated_at,
           daysAgo,
+          context_source: contact.context_source || 'unknown',
         }),
         {
           status: 200,
@@ -207,121 +208,156 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    // Build context with priority hierarchy: Recent Interactions > Notes > LinkedIn > Other info
-    const hasInteractionHistory = contactData.interaction_history &&
-      Array.isArray(contactData.interaction_history) &&
-      contactData.interaction_history.length > 0;
-    const hasNotes = contactData.notes && contactData.notes.trim().length > 0;
-    const hasLinkedIn = contactData.linkedin_url && contactData.linkedin_url.trim().length > 0;
-    const hasInterests = contactData.interests && contactData.interests.length > 0;
+    // EXPLICIT RULE HIERARCHY with TypeScript conditionals
+    // Rule 1: If interaction_history exists → use last 3 with timestamps
+    // Rule 2: Else if notes exist → base on notes content only
+    // Rule 3: Else if linkedin_url exists → infer from profile
+    // Rule 4: Else → warm peer-level fallback
 
-    // Primary context - what matters most
-    const primaryContext: string[] = [];
+    type ContextSource = 'interaction_history' | 'notes' | 'linkedin' | 'fallback';
+    let contextSource: ContextSource;
+    let prompt = "";
+    let systemPrompt = "";
 
-    // Prioritize recent interaction history (last 3 interactions)
-    if (hasInteractionHistory) {
-      const recentInteractions = contactData.interaction_history!
-        .slice(-3)
-        .reverse()
-        .map((interaction, idx) => {
-          const daysAgo = Math.floor(
-            (new Date().getTime() - new Date(interaction.date).getTime()) / (1000 * 60 * 60 * 24)
-          );
-          const timeRef = daysAgo === 0 ? "today" :
-                         daysAgo === 1 ? "yesterday" :
-                         daysAgo < 7 ? `${daysAgo} days ago` :
-                         `${Math.floor(daysAgo / 7)} weeks ago`;
-          return `${idx === 0 ? "Most recent" : timeRef}: ${interaction.note}`;
-        });
-      primaryContext.push(`Recent Interaction History:\n${recentInteractions.join("\n")}`);
-    }
-
-    if (hasNotes) {
-      primaryContext.push(`General Notes: ${contactData.notes}`);
-    }
-    if (hasLinkedIn) {
-      primaryContext.push(`LinkedIn: ${contactData.linkedin_url}`);
-    }
-    if (hasInterests) {
-      primaryContext.push(`Interests: ${contactData.interests.join(", ")}`);
-    }
-
-    // Secondary context - supporting information
+    // Secondary context - supporting information (used across all rules)
     const secondaryContext = [
       `Name: ${contactData.name}`,
       contactData.title ? `Title: ${contactData.title}` : "",
       contactData.company ? `Company: ${contactData.company}` : "",
       contactData.relationship ? `How you know them: ${contactData.relationship}` : "",
       contactData.tags && contactData.tags.length > 0 ? `Tags: ${contactData.tags.join(", ")}` : "",
-      contactData.last_contacted ? `Last contacted: ${contactData.last_contacted}` : "",
     ].filter(Boolean);
 
-    // Build intelligent prompt based on available data
-    let prompt = "";
+    // RULE 1: Interaction History (highest priority)
+    if (contactData.interaction_history &&
+        Array.isArray(contactData.interaction_history) &&
+        contactData.interaction_history.length > 0) {
 
-    if (hasInteractionHistory) {
-      prompt = `Generate 3 natural, conversational follow-up starters for reconnecting with ${contactData.name}. Use the recent interaction history to create contextually relevant conversation starters that reference specific topics, meetings, or discussions.
+      contextSource = 'interaction_history';
 
-${primaryContext.join("\n\n")}
+      // Extract last 3 interactions with timestamps and specific details
+      const recentInteractions = contactData.interaction_history
+        .slice(-3)
+        .reverse()
+        .map((interaction) => {
+          const daysAgo = Math.floor(
+            (new Date().getTime() - new Date(interaction.date).getTime()) / (1000 * 60 * 60 * 24)
+          );
+          const timeRef = daysAgo === 0 ? "today" :
+                         daysAgo === 1 ? "yesterday" :
+                         daysAgo < 7 ? `${daysAgo} days ago` :
+                         daysAgo < 30 ? `${Math.floor(daysAgo / 7)} weeks ago` :
+                         `${Math.floor(daysAgo / 30)} months ago`;
+          return `[${timeRef}] ${interaction.note}`;
+        });
+
+      systemPrompt = `You are helping someone send a WhatsApp or Signal message to a peer.
+
+CRITICAL RULES:
+- Write like you're texting a colleague or friend — casual, warm, direct
+- NEVER use corporate jargon, formal language, or phrases like "Hope you're well" or "I trust this finds you"
+- Quote or reference a SPECIFIC moment, project name, event, location, or topic from the interaction history
+- Each starter must be under 2 sentences
+- Tone: human, curious, conversational — NOT salesy or formal
+- Return ONLY 3 starters, one per line, no numbers or bullets`;
+
+      prompt = `Generate 3 conversation starters to follow up with ${contactData.name}.
+
+RECENT CONVERSATION HISTORY (use specific details from these):
+${recentInteractions.join("\n")}
 
 Supporting context:
 ${secondaryContext.join("\n")}
 
-Guidelines:
-- PRIORITIZE the most recent interaction history - reference specific topics, meetings, projects, or discussions mentioned
-- If they mentioned specific challenges, projects, or interests, follow up on those naturally
-- Make it sound like you genuinely remember your last conversation
-- Use casual, friendly language - write like you're texting a colleague or friend
-- Each starter should feel like a natural continuation of your relationship
-- Keep under 100 characters each
-- Be authentic and human - avoid corporate jargon or templates
-- Return ONLY 3 starters, one per line, no numbers or bullets`;
-    } else if (hasNotes) {
-      prompt = `Generate 3 natural, conversational starters to reconnect with ${contactData.name}. Focus primarily on the topics and details mentioned in their notes.
+Requirements:
+- Reference something SPECIFIC from the most recent interaction
+- If they mentioned a challenge, project, meeting, or event, follow up on it naturally
+- Write like you're texting on WhatsApp — keep it real and conversational
+- Each starter should feel like you genuinely remember what you discussed
+- NO generic corporate language`;
 
-${primaryContext.join("\n\n")}
+    // RULE 2: Notes only (no interaction history)
+    } else if (contactData.notes && contactData.notes.trim().length > 0) {
+
+      contextSource = 'notes';
+
+      systemPrompt = `You are helping someone send a WhatsApp or Signal message to a peer.
+
+CRITICAL RULES:
+- Write like you're texting a colleague or friend — casual, warm, direct
+- NEVER use phrases like "Hope you're well", "I trust this finds you", or other corporate filler
+- Reference CONCRETE details from the notes: specific events, places, interests, projects
+- Each starter must be under 2 sentences
+- Tone: human, curious, conversational — NOT formal or salesy
+- Return ONLY 3 starters, one per line, no numbers or bullets`;
+
+      prompt = `Generate 3 conversation starters for ${contactData.name}.
+
+NOTES (base starters purely on this):
+${contactData.notes}
 
 Supporting context:
 ${secondaryContext.join("\n")}
 
-Guidelines:
-- PRIORITIZE referencing specific topics, events, or projects from the Notes section
-- Make it sound like a real person reaching out, not a formal message
-- Use casual, friendly language - avoid corporate speak
-- Each starter should feel personal and show you remember specific details about them
-- Keep under 100 characters each
-- Make them feel authentic and genuine, like catching up with a friend
+Requirements:
+- Pull SPECIFIC details from the notes (event names, topics, locations, shared interests)
+- Write like you're texting on WhatsApp — keep it authentic
+- Show you remember specific things about them
+- NO corporate speak or generic openers`;
+
+    // RULE 3: LinkedIn URL (infer from profile)
+    } else if (contactData.linkedin_url && contactData.linkedin_url.trim().length > 0) {
+
+      contextSource = 'linkedin';
+
+      systemPrompt = `You are helping someone send a WhatsApp or Signal message to a peer.
+
+CRITICAL RULES:
+- Write like you're texting a colleague — casual, warm, direct
+- NEVER use phrases like "Hope you're well" or "I trust this message finds you"
+- Reference their ACTUAL role, company, or a recent professional achievement naturally
+- Each starter must be under 2 sentences
+- Tone: human, curious, peer-to-peer — NOT formal recruitment or sales language
 - Return ONLY 3 starters, one per line, no numbers or bullets`;
-    } else if (hasLinkedIn || hasInterests) {
-      prompt = `Generate 3 natural, conversational starters to reconnect with ${contactData.name}. ${hasLinkedIn ? "Use their LinkedIn profile information to create relevant, personalized messages." : "Use their interests to craft engaging conversation starters."}
 
-${primaryContext.join("\n\n")}
+      prompt = `Generate 3 conversation starters for ${contactData.name}.
 
-Supporting context:
+Context:
 ${secondaryContext.join("\n")}
+LinkedIn: ${contactData.linkedin_url}
 
-Guidelines:
-- ${hasLinkedIn ? "Reference their professional background, recent posts, or career moves" : "Incorporate their interests naturally"}
-- Sound like a real person reaching out, not a template
-- Keep it casual and friendly - no corporate jargon
-- Show genuine interest in what they're doing
-- Keep under 100 characters each
-- Make them authentic and human
-- Return ONLY 3 starters, one per line, no numbers or bullets`;
+Requirements:
+- Reference their current role or company in a natural, curious way
+- Write like you're texting on WhatsApp — genuine peer-to-peer tone
+- Ask about their work or recent moves without sounding like a recruiter
+- NO corporate language or formal phrases`;
+
+    // RULE 4: Fallback (minimal context)
     } else {
-      prompt = `Generate 3 natural, conversational starters to reconnect with ${contactData.name}.
 
+      contextSource = 'fallback';
+
+      systemPrompt = `You are helping someone send a WhatsApp or Signal message to a peer.
+
+CRITICAL RULES:
+- Write like you're texting a colleague or friend — casual, warm, direct
+- NEVER use phrases like "Hope you're well" or "Long time no talk"
+- Keep it warm but not overly familiar since you don't have detailed context
+- Each starter must be under 2 sentences
+- Tone: human, curious, peer-level — NOT formal or salesy
+- Return ONLY 3 starters, one per line, no numbers or bullets`;
+
+      prompt = `Generate 3 warm conversation starters to reconnect with ${contactData.name}.
+
+Context:
 ${secondaryContext.join("\n")}
 
-Guidelines:
-- Since detailed notes aren't available, focus on warm, genuine reconnection messages
-- Reference their ${contactData.title || "work"} ${contactData.company ? `at ${contactData.company}` : ""} if mentioned
-- Sound like a real person reaching out, not a template
-- Keep it casual and friendly
-- Show genuine interest in catching up
-- Keep under 100 characters each
-- Make them feel authentic and human
-- Return ONLY 3 starters, one per line, no numbers or bullets`;
+Requirements:
+- Create genuine, warm reconnection messages
+- Write like you're texting on WhatsApp — natural and human
+- Reference their ${contactData.title || "work"} ${contactData.company ? `at ${contactData.company}` : ""} if available
+- Keep it friendly and curious without being overly personal
+- NO corporate speak or generic templates`;
     }
 
     const response = await fetch("https://api.openai.com/v1/chat/completions", {
@@ -335,8 +371,7 @@ Guidelines:
         messages: [
           {
             role: "system",
-            content:
-              "You are a thoughtful friend helping someone reconnect with their contacts. Generate conversation starters that sound natural, human, and genuine - like something a real person would text or say. Avoid corporate language, templates, or overly formal phrasing. Be warm, personal, and conversational.",
+            content: systemPrompt,
           },
           {
             role: "user",
@@ -372,6 +407,7 @@ Guidelines:
       .update({
         cached_starters: starters,
         starters_generated_at: now.toISOString(),
+        context_source: contextSource,
       })
       .eq("id", contactData.contactId);
 
@@ -407,6 +443,7 @@ Guidelines:
         cached: false,
         generatedAt: now.toISOString(),
         daysAgo: 0,
+        context_source: contextSource,
         dailyUsed: updatedDailyCount || 0,
         dailyLimit: isOwner ? null : DAILY_LIMIT,
         monthlyUsed: updatedMonthlyCount || 0,
