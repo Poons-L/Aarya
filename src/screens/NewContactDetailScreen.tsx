@@ -74,6 +74,7 @@ export function NewContactDetailScreen({ contactId, onBack, onEditContact, onAdd
 
       const requestData = {
         contact_id: contact.id,
+        contact: contact, // Send full contact object as fallback
         context: {
           context_type: "generic_checkin" as const,
           title: contact.name,
@@ -87,7 +88,7 @@ export function NewContactDetailScreen({ contactId, onBack, onEditContact, onAdd
         name: contact.name,
         fullContact: contact
       });
-      console.log('🚀 [AI Prep] Calling interaction-prep-agent with:', { apiUrl, requestData });
+      console.log('🚀 [AI Prep] Calling interaction-prep-agent with contact fallback:', { apiUrl, requestData });
 
       const response = await fetch(apiUrl, {
         method: 'POST',

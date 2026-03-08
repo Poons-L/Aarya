@@ -18,6 +18,7 @@ type ChannelType = "in_person" | "zoom" | "teams" | "phone" | "whatsapp" | "link
 
 interface InteractionPrepRequest {
   contact_id: string;
+  contact?: any; // Optional full contact object as fallback
   context?: {
     context_type?: ContextType;
     title?: string | null;
@@ -89,13 +90,21 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    console.log('🔎 [Interaction Prep] Fetching contact:', requestData.contact_id);
-    const contact = await getContact(requestData.contact_id);
+    // Try to get contact from database first, filtering by user_id
+    console.log('🔎 [Interaction Prep] Fetching contact from database:', requestData.contact_id);
+    let contact = await getContact(requestData.contact_id, user.id);
+
+    // If contact not found in DB but client provided full contact object, use it as fallback
+    if (!contact && requestData.contact) {
+      console.log('⚠️ [Interaction Prep] Contact not found in DB, using client-provided contact object');
+      contact = requestData.contact;
+    }
 
     if (!contact) {
-      console.error('❌ [Interaction Prep] Contact not found:', {
+      console.error('❌ [Interaction Prep] Contact not found in DB or request:', {
         contact_id: requestData.contact_id,
-        user_id: user.id
+        user_id: user.id,
+        had_client_contact: !!requestData.contact
       });
       return new Response(
         JSON.stringify({
@@ -109,9 +118,10 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    console.log('✅ [Interaction Prep] Contact found:', {
+    console.log('✅ [Interaction Prep] Contact resolved:', {
       id: contact.id,
-      name: contact.name
+      name: contact.name,
+      source: requestData.contact ? 'client-fallback' : 'database'
     });
 
     const interactions = await getRecentInteractions(requestData.contact_id, 3);

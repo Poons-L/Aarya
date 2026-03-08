@@ -33,18 +33,25 @@ export interface ContextSource {
   type: 'interaction_history' | 'notes' | 'linkedin' | 'fallback';
 }
 
-export async function getContact(contactId: string): Promise<Contact | null> {
-  console.log('🔍 [Toolkit] getContact called with ID:', contactId);
+export async function getContact(contactId: string, userId?: string): Promise<Contact | null> {
+  console.log('🔍 [Toolkit] getContact called with:', { contactId, userId });
 
-  const { data, error } = await supabaseAdmin
+  const query = supabaseAdmin
     .from("contacts")
     .select("id, name, company, title, email, phone, linkedin_url, interests, notes, tags, relationship, last_contacted")
-    .eq("id", contactId)
-    .single();
+    .eq("id", contactId);
+
+  // Filter by user_id if provided to respect data ownership
+  if (userId) {
+    query.eq("user_id", userId);
+  }
+
+  const { data, error, count } = await query.maybeSingle();
 
   if (error) {
     console.error("❌ [Toolkit] Error fetching contact:", {
       contactId,
+      userId,
       error: error.message,
       details: error.details,
       hint: error.hint,
@@ -54,7 +61,11 @@ export async function getContact(contactId: string): Promise<Contact | null> {
   }
 
   if (!data) {
-    console.warn("⚠️ [Toolkit] No contact data returned for ID:", contactId);
+    console.warn("⚠️ [Toolkit] No contact data returned for:", {
+      contactId,
+      userId,
+      message: "Contact not found or user does not have access"
+    });
     return null;
   }
 
