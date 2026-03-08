@@ -80,6 +80,7 @@ export function NewContactDetailScreen({ contactId, onBack, onEditContact, onAdd
         interests: contact.interests,
         linkedin_url: contact.linkedin_url,
         last_contacted: contact.last_contacted,
+        interaction_history: contact.interaction_history,
         contactId: contact.id,
         forceRefresh
       };

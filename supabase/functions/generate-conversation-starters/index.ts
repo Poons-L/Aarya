@@ -24,6 +24,11 @@ interface ContactData {
   last_contacted?: string;
   contactId?: string;
   forceRefresh?: boolean;
+  interaction_history?: Array<{
+    date: string;
+    note: string;
+    type: string;
+  }>;
 }
 
 Deno.serve(async (req: Request) => {
@@ -202,15 +207,37 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    // Build context with priority hierarchy: Notes > LinkedIn > Other info
+    // Build context with priority hierarchy: Recent Interactions > Notes > LinkedIn > Other info
+    const hasInteractionHistory = contactData.interaction_history &&
+      Array.isArray(contactData.interaction_history) &&
+      contactData.interaction_history.length > 0;
     const hasNotes = contactData.notes && contactData.notes.trim().length > 0;
     const hasLinkedIn = contactData.linkedin_url && contactData.linkedin_url.trim().length > 0;
     const hasInterests = contactData.interests && contactData.interests.length > 0;
 
     // Primary context - what matters most
     const primaryContext: string[] = [];
+
+    // Prioritize recent interaction history (last 3 interactions)
+    if (hasInteractionHistory) {
+      const recentInteractions = contactData.interaction_history!
+        .slice(-3)
+        .reverse()
+        .map((interaction, idx) => {
+          const daysAgo = Math.floor(
+            (new Date().getTime() - new Date(interaction.date).getTime()) / (1000 * 60 * 60 * 24)
+          );
+          const timeRef = daysAgo === 0 ? "today" :
+                         daysAgo === 1 ? "yesterday" :
+                         daysAgo < 7 ? `${daysAgo} days ago` :
+                         `${Math.floor(daysAgo / 7)} weeks ago`;
+          return `${idx === 0 ? "Most recent" : timeRef}: ${interaction.note}`;
+        });
+      primaryContext.push(`Recent Interaction History:\n${recentInteractions.join("\n")}`);
+    }
+
     if (hasNotes) {
-      primaryContext.push(`Recent Notes/Topics: ${contactData.notes}`);
+      primaryContext.push(`General Notes: ${contactData.notes}`);
     }
     if (hasLinkedIn) {
       primaryContext.push(`LinkedIn: ${contactData.linkedin_url}`);
@@ -232,10 +259,27 @@ Deno.serve(async (req: Request) => {
     // Build intelligent prompt based on available data
     let prompt = "";
 
-    if (hasNotes) {
-      prompt = `Generate 3 natural, conversational starters to reconnect with ${contactData.name}. Focus primarily on the topics and details mentioned in their recent notes.
+    if (hasInteractionHistory) {
+      prompt = `Generate 3 natural, conversational follow-up starters for reconnecting with ${contactData.name}. Use the recent interaction history to create contextually relevant conversation starters that reference specific topics, meetings, or discussions.
 
-${primaryContext.join("\n")}
+${primaryContext.join("\n\n")}
+
+Supporting context:
+${secondaryContext.join("\n")}
+
+Guidelines:
+- PRIORITIZE the most recent interaction history - reference specific topics, meetings, projects, or discussions mentioned
+- If they mentioned specific challenges, projects, or interests, follow up on those naturally
+- Make it sound like you genuinely remember your last conversation
+- Use casual, friendly language - write like you're texting a colleague or friend
+- Each starter should feel like a natural continuation of your relationship
+- Keep under 100 characters each
+- Be authentic and human - avoid corporate jargon or templates
+- Return ONLY 3 starters, one per line, no numbers or bullets`;
+    } else if (hasNotes) {
+      prompt = `Generate 3 natural, conversational starters to reconnect with ${contactData.name}. Focus primarily on the topics and details mentioned in their notes.
+
+${primaryContext.join("\n\n")}
 
 Supporting context:
 ${secondaryContext.join("\n")}
@@ -251,7 +295,7 @@ Guidelines:
     } else if (hasLinkedIn || hasInterests) {
       prompt = `Generate 3 natural, conversational starters to reconnect with ${contactData.name}. ${hasLinkedIn ? "Use their LinkedIn profile information to create relevant, personalized messages." : "Use their interests to craft engaging conversation starters."}
 
-${primaryContext.join("\n")}
+${primaryContext.join("\n\n")}
 
 Supporting context:
 ${secondaryContext.join("\n")}
