@@ -163,9 +163,16 @@ export function NewContactDetailScreen({ contactId, onBack, onEditContact, onAdd
       console.log('🔍 [AI Prep] Contact object:', {
         id: contact.id,
         name: contact.name,
-        fullContact: contact
+        hasNotes: !!contact.notes,
+        notesLength: contact.notes?.length || 0,
+        notesPreview: contact.notes ? contact.notes.substring(0, 100) : 'NO NOTES IN UI'
       });
-      console.log('🚀 [AI Prep] Calling interaction-prep-agent with contact fallback:', { apiUrl, requestData });
+      console.log('🚀 [AI Prep] Request payload:', {
+        contact_id: requestData.contact_id,
+        hasUserContextNote: !!requestData.user_context_note,
+        userContextNote: requestData.user_context_note,
+        context: requestData.context
+      });
 
       const response = await fetch(apiUrl, {
         method: 'POST',

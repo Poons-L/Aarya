@@ -96,19 +96,39 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    // Use the contact data provided by the UI (just like the old generate-conversation-starters)
-    const contact = requestData.contact;
+    // CRITICAL: Fetch contact from database to get latest notes, not just UI data
+    const contactFromDb = await getContact(requestData.contact_id, user.id);
 
-    console.log('✅ [Interaction Prep] Using contact from UI:', {
+    if (!contactFromDb) {
+      console.error('❌ [Interaction Prep] Contact not found in database:', requestData.contact_id);
+      return new Response(
+        JSON.stringify({ error: "Contact not found" }),
+        {
+          status: 404,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        }
+      );
+    }
+
+    // Merge DB data (has notes) with UI data (might have other fields)
+    const contact = {
+      ...requestData.contact,
+      ...contactFromDb,
+    };
+
+    console.log('✅ [Interaction Prep] Using contact from database:', {
       id: contact.id,
       name: contact.name,
       hasNotes: !!contact.notes,
       notesLength: contact.notes?.length || 0,
+      notesPreview: contact.notes ? contact.notes.substring(0, 100) : 'NO NOTES',
       hasLinkedIn: !!contact.linkedin_url,
+      hasUserContextNote: !!requestData.user_context_note,
+      userContextNotePreview: requestData.user_context_note ? requestData.user_context_note.substring(0, 50) : null,
     });
 
     const interactions = await getRecentInteractions(requestData.contact_id, 3);
-    const notes = await getNotes(requestData.contact_id);
+    const notes = contact.notes;
 
     let startersResponse;
     try {
