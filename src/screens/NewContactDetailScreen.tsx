@@ -18,6 +18,8 @@ export function NewContactDetailScreen({ contactId, onBack, onEditContact, onAdd
   const [showAIStarters, setShowAIStarters] = useState(false);
   const [generatingAI, setGeneratingAI] = useState(false);
   const [aiStarters, setAIStarters] = useState<string[]>([]);
+  const [briefingSummary, setBriefingSummary] = useState<string>('');
+  const [contextSource, setContextSource] = useState<string>('');
   const [aiMetadata, setAiMetadata] = useState<{
     cached?: boolean;
     daysAgo?: number;
@@ -68,24 +70,18 @@ export function NewContactDetailScreen({ contactId, onBack, onEditContact, onAdd
         return;
       }
 
-      const apiUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-conversation-starters`;
+      const apiUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/meeting-prep-agent`;
 
-      const contactData = {
-        name: contact.name,
-        title: contact.title,
-        company: contact.company,
-        relationship: contact.relationship,
-        notes: contact.notes,
-        tags: contact.tags,
-        interests: contact.interests,
-        linkedin_url: contact.linkedin_url,
-        last_contacted: contact.last_contacted,
-        interaction_history: contact.interaction_history,
-        contactId: contact.id,
-        forceRefresh
+      const requestData = {
+        contact_id: contact.id,
+        meeting: {
+          title: contact.name,
+          datetime: new Date().toISOString(),
+          channel: null
+        }
       };
 
-      console.log('Calling AI edge function with:', { apiUrl, contactData });
+      console.log('Calling meeting-prep-agent with:', { apiUrl, requestData });
 
       const response = await fetch(apiUrl, {
         method: 'POST',
@@ -93,11 +89,11 @@ export function NewContactDetailScreen({ contactId, onBack, onEditContact, onAdd
           'Authorization': `Bearer ${session.access_token}`,
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(contactData)
+        body: JSON.stringify(requestData)
       });
 
       const data = await response.json();
-      console.log('AI response:', { status: response.status, data });
+      console.log('Meeting prep response:', { status: response.status, data });
 
       if (response.status === 429) {
         setAIStarters([data.message || 'Rate limit reached. Please try again later.']);
@@ -110,14 +106,8 @@ export function NewContactDetailScreen({ contactId, onBack, onEditContact, onAdd
       } else if (response.ok) {
         if (data.starters && Array.isArray(data.starters)) {
           setAIStarters(data.starters);
-          setAiMetadata({
-            cached: data.cached,
-            daysAgo: data.daysAgo,
-            dailyUsed: data.dailyUsed,
-            dailyLimit: data.dailyLimit,
-            monthlyUsed: data.monthlyUsed,
-            monthlyLimit: data.monthlyLimit,
-          });
+          setBriefingSummary(data.briefing_summary || '');
+          setContextSource(data.context_source || '');
         } else if (data.error) {
           console.error('AI error:', data.error);
           setAIStarters([
@@ -330,40 +320,37 @@ export function NewContactDetailScreen({ contactId, onBack, onEditContact, onAdd
               <div className="flex items-center justify-between mb-3">
                 <div className="flex items-center gap-2">
                   <Sparkles size={18} className="text-purple-600" />
-                  <h3 className="font-semibold text-purple-900">Conversation Starters</h3>
+                  <h3 className="font-semibold text-purple-900">Meeting Prep</h3>
                 </div>
-                {aiMetadata.cached && aiMetadata.daysAgo !== undefined && (
-                  <div className="flex items-center gap-1 text-xs text-purple-600">
-                    <Clock size={14} />
-                    <span>
-                      {aiMetadata.daysAgo === 0 ? 'Just now' : `${aiMetadata.daysAgo}d ago`}
-                    </span>
+                {contextSource && (
+                  <div className="text-xs text-purple-600 bg-purple-100 px-2 py-1 rounded-full">
+                    {contextSource.replace('_', ' ')}
                   </div>
                 )}
               </div>
+
+              {briefingSummary && (
+                <div className="mb-3 bg-white rounded-lg p-3 text-sm text-slate-700 border border-purple-100">
+                  <div className="font-semibold text-purple-900 mb-1 text-xs">Quick Context</div>
+                  {briefingSummary}
+                </div>
+              )}
+
+              <div className="mb-2 text-xs font-semibold text-purple-900">Conversation Starters</div>
               <div className="space-y-2">
                 {aiStarters.map((starter, index) => (
-                  <div
+                  <button
                     key={index}
-                    className="bg-white rounded-lg p-3 text-sm text-slate-700 border border-purple-100"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                    }}
+                    className="w-full bg-white rounded-lg p-3 text-sm text-slate-700 border border-purple-100 hover:border-purple-300 active:scale-98 transition-all text-left"
                   >
                     {starter}
-                  </div>
+                  </button>
                 ))}
               </div>
-              {aiMetadata.cached && (
-                <button
-                  onClick={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    generateAIStarters(true);
-                  }}
-                  disabled={generatingAI}
-                  className="mt-3 w-full text-center text-sm text-purple-600 hover:text-purple-700 font-medium disabled:opacity-50"
-                >
-                  Generate fresh starters
-                </button>
-              )}
             </div>
           )}
 
