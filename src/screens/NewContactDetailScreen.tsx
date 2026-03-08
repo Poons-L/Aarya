@@ -176,6 +176,9 @@ export function NewContactDetailScreen({ contactId, onBack, onEditContact, onAdd
         contact_id: requestData.contact_id,
         hasUserContextNote: !!requestData.user_context_note,
         userContextNote: requestData.user_context_note,
+        forceRefresh: requestData.forceRefresh,
+        shouldForceRefresh,
+        hasUserContext,
         context: requestData.context
       });
 
