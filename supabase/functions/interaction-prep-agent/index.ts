@@ -96,39 +96,26 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    // CRITICAL: Fetch contact from database to get latest notes, not just UI data
+    // Try to fetch contact from database to get latest notes
     const contactFromDb = await getContact(requestData.contact_id, user.id);
 
-    if (!contactFromDb) {
-      console.error('❌ [Interaction Prep] Contact not found in database:', requestData.contact_id);
-      return new Response(
-        JSON.stringify({ error: "Contact not found" }),
-        {
-          status: 404,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        }
-      );
-    }
+    // Fallback pattern: Use DB if available, otherwise use UI contact
+    const contact = contactFromDb
+      ? { ...requestData.contact, ...contactFromDb }
+      : requestData.contact;
 
-    // Merge DB data (has notes) with UI data (might have other fields)
-    const contact = {
-      ...requestData.contact,
-      ...contactFromDb,
-    };
-
-    console.log('✅ [Interaction Prep] Using contact from database:', {
+    console.log('✅ [Interaction Prep] Contact lookup:', {
       id: contact.id,
       name: contact.name,
+      source: contactFromDb ? 'database' : 'UI_fallback',
       hasNotes: !!contact.notes,
       notesLength: contact.notes?.length || 0,
       notesPreview: contact.notes ? contact.notes.substring(0, 100) : 'NO NOTES',
       hasLinkedIn: !!contact.linkedin_url,
-      hasUserContextNote: !!requestData.user_context_note,
-      userContextNotePreview: requestData.user_context_note ? requestData.user_context_note.substring(0, 50) : null,
     });
 
     const interactions = await getRecentInteractions(requestData.contact_id, 3);
-    const notes = contact.notes;
+    const notes = await getNotes(requestData.contact_id);
 
     let startersResponse;
     try {
@@ -137,8 +124,7 @@ Deno.serve(async (req: Request) => {
         requestData.contact_id,
         authHeader,
         false,
-        contact,
-        requestData.user_context_note
+        contact
       );
     } catch (error) {
       console.error("Error generating starters:", error);

@@ -24,7 +24,6 @@ interface ContactData {
   last_contacted?: string;
   contactId?: string;
   forceRefresh?: boolean;
-  user_context_note?: string;
   interaction_history?: Array<{
     date: string;
     note: string;
@@ -89,8 +88,6 @@ Deno.serve(async (req: Request) => {
       hasInteractionHistory: !!contactData.interaction_history,
       interactionCount: contactData.interaction_history?.length || 0,
       hasLinkedIn: !!contactData.linkedin_url,
-      hasUserContextNote: !!contactData.user_context_note,
-      userContextNotePreview: contactData.user_context_note ? contactData.user_context_note.substring(0, 50) : null,
     });
 
     if (!contactData.contactId) {
@@ -279,7 +276,6 @@ You receive:
 - interaction_history (last 1-3 interactions with timestamps)
 - optional notes (informal memory from the user)
 - optional linkedin_url/role context
-- optional user_context_note (what the user just said they want to focus on now)
 - context_source = interaction_history
 
 For context_source = "interaction_history":
@@ -288,11 +284,7 @@ For context_source = "interaction_history":
 - Each starter MUST reference at least one of those concrete details
 - If they mentioned a challenge, project, meeting, or event, follow up on it naturally
 - Write like you're texting on WhatsApp — keep it real and conversational
-- Each starter should feel like you genuinely remember what you discussed
-${contactData.user_context_note ? `
-IMPORTANT: user_context_note is present. You MUST strongly consider this when writing starters.
-At least one starter should directly reflect what the user wants to do this time while staying natural.
-Combine the interaction history details with the current intent from user_context_note.` : ''}`;
+- Each starter should feel like you genuinely remember what you discussed`;
 
       prompt = `Generate 3 conversation starters to follow up with ${contactData.name}.
 
@@ -301,13 +293,11 @@ ${recentInteractions.join("\n")}
 
 Supporting context:
 ${secondaryContext.join("\n")}
-${contactData.user_context_note ? `\nUSER'S CURRENT INTENT (what they want to do this time):\n${contactData.user_context_note}` : ''}
 
 Requirements:
 - Reference something SPECIFIC from the most recent interaction
 - Write like you're texting on WhatsApp — natural and conversational
-- NO generic corporate language
-${contactData.user_context_note ? '- At least one starter must reflect the user\'s current intent while staying natural' : ''}`;
+- NO generic corporate language`;
 
     // RULE 2: Notes only (no interaction history)
     } else if (contactData.notes && contactData.notes.trim().length > 0) {
@@ -327,7 +317,6 @@ You receive:
 - contact_name
 - notes (informal memory/brain dump from the user)
 - optional title/company context
-- optional user_context_note (what the user just said they want to focus on now)
 - context_source = notes
 
 For context_source = "notes":
@@ -337,11 +326,7 @@ For context_source = "notes":
 - Each starter MUST mention at least one specific detail from the notes (e.g., past company, current role, what you want to learn)
 - Reference concrete details: specific events, places, interests, projects, past work history
 - Write like you're texting on WhatsApp — keep it authentic
-- Show you remember specific things about them
-${contactData.user_context_note ? `
-IMPORTANT: user_context_note is present. You MUST strongly consider this when writing starters.
-At least one starter should directly reflect what the user wants to do this time while staying natural.
-Combine the notes details with the current intent from user_context_note.` : ''}`;
+- Show you remember specific things about them`;
 
       prompt = `Generate 3 conversation starters for ${contactData.name}.
 
@@ -350,14 +335,12 @@ ${contactData.notes}
 
 Supporting context:
 ${secondaryContext.join("\n")}
-${contactData.user_context_note ? `\nUSER'S CURRENT INTENT (what they want to do this time):\n${contactData.user_context_note}` : ''}
 
 Requirements:
 - Pull SPECIFIC details from the notes (event names, past companies like SAP, current companies like Google, roles, what you want from them)
 - Write like you're texting on WhatsApp — natural and conversational
 - Show you remember specific details about your history and what they're doing now
-- NO corporate speak or generic openers
-${contactData.user_context_note ? '- At least one starter must reflect the user\'s current intent while staying natural' : ''}`;
+- NO corporate speak or generic openers`;
 
     // RULE 3: LinkedIn URL (infer from profile)
     } else if (contactData.linkedin_url && contactData.linkedin_url.trim().length > 0) {
@@ -377,7 +360,6 @@ You receive:
 - contact_name
 - title/company context
 - linkedin_url
-- optional user_context_note (what the user just said they want to focus on now)
 - context_source = linkedin
 
 For context_source = "linkedin":
@@ -385,24 +367,19 @@ For context_source = "linkedin":
 - Mention something natural (their role, what they lead, an obvious focus) in the starters
 - Reference their ACTUAL role or company in a natural, curious way
 - Write like you're texting on WhatsApp — genuine peer-to-peer tone
-- Ask about their work or recent moves without sounding like a recruiter
-${contactData.user_context_note ? `
-IMPORTANT: user_context_note is present. You MUST strongly consider this when writing starters.
-At least one starter should directly reflect what the user wants to do this time while staying natural.` : ''}`;
+- Ask about their work or recent moves without sounding like a recruiter`;
 
       prompt = `Generate 3 conversation starters for ${contactData.name}.
 
 Context:
 ${secondaryContext.join("\n")}
 LinkedIn: ${contactData.linkedin_url}
-${contactData.user_context_note ? `\nUSER'S CURRENT INTENT (what they want to do this time):\n${contactData.user_context_note}` : ''}
 
 Requirements:
 - Reference their current role or company in a natural, curious way
 - Write like you're texting on WhatsApp — genuine peer-to-peer tone
 - Ask about their work without sounding like a recruiter
-- NO corporate language or formal phrases
-${contactData.user_context_note ? '- At least one starter must reflect the user\'s current intent while staying natural' : ''}`;
+- NO corporate language or formal phrases`;
 
     // RULE 4: Fallback (minimal context)
     } else {
@@ -421,31 +398,25 @@ General rules:
 You receive:
 - contact_name
 - minimal context (maybe title/company)
-- optional user_context_note (what the user just said they want to focus on now)
 - context_source = fallback
 
 For context_source = "fallback":
 - Assume warm but low-context reconnect
 - Write 3 simple, friendly openers that don't pretend you remember specific details
 - Keep it warm but not overly familiar since you don't have detailed context
-- Reference their title/company if available, but keep it natural
-${contactData.user_context_note ? `
-IMPORTANT: user_context_note is present. You MUST strongly consider this when writing starters.
-At least one starter should directly reflect what the user wants to do this time while staying natural.` : ''}`;
+- Reference their title/company if available, but keep it natural`;
 
       prompt = `Generate 3 warm conversation starters to reconnect with ${contactData.name}.
 
 Context:
 ${secondaryContext.join("\n")}
-${contactData.user_context_note ? `\nUSER'S CURRENT INTENT (what they want to do this time):\n${contactData.user_context_note}` : ''}
 
 Requirements:
 - Create genuine, warm reconnection messages
 - Write like you're texting on WhatsApp — natural and human
 - Reference their ${contactData.title || "work"} ${contactData.company ? `at ${contactData.company}` : ""} if available
 - Keep it friendly and curious without being overly personal
-- NO corporate speak or generic templates
-${contactData.user_context_note ? '- At least one starter must reflect the user\'s current intent while staying natural' : ''}`;
+- NO corporate speak or generic templates`;
     }
 
     const modelName = "gpt-4o";
