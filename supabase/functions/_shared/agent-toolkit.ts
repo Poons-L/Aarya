@@ -113,7 +113,8 @@ export async function generateConversationStarters(
   contactId: string,
   authToken: string,
   forceRefresh: boolean = false,
-  contactData?: Contact
+  contactData?: Contact,
+  userContextNote?: string
 ): Promise<ConversationStartersResponse> {
   // Use provided contact data or fetch from DB
   const contact = contactData || await getContact(contactId);
@@ -133,6 +134,8 @@ export async function generateConversationStarters(
     hasInteractionHistory: interactions.length > 0,
     interactionCount: interactions.length,
     hasLinkedIn: !!contact.linkedin_url,
+    hasUserContextNote: !!userContextNote,
+    userContextNotePreview: userContextNote ? userContextNote.substring(0, 50) : null,
   });
 
   const response = await fetch(
@@ -155,6 +158,7 @@ export async function generateConversationStarters(
         tags: contact.tags,
         last_contacted: contact.last_contacted,
         interaction_history: interactions,
+        user_context_note: userContextNote,
         forceRefresh,
       }),
     }

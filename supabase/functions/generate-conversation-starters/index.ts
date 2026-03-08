@@ -24,6 +24,7 @@ interface ContactData {
   last_contacted?: string;
   contactId?: string;
   forceRefresh?: boolean;
+  user_context_note?: string;
   interaction_history?: Array<{
     date: string;
     note: string;
@@ -88,6 +89,8 @@ Deno.serve(async (req: Request) => {
       hasInteractionHistory: !!contactData.interaction_history,
       interactionCount: contactData.interaction_history?.length || 0,
       hasLinkedIn: !!contactData.linkedin_url,
+      hasUserContextNote: !!contactData.user_context_note,
+      userContextNotePreview: contactData.user_context_note ? contactData.user_context_note.substring(0, 50) : null,
     });
 
     if (!contactData.contactId) {
@@ -284,7 +287,8 @@ For context_source = "interaction_history":
 - Each starter MUST reference at least one of those concrete details
 - If they mentioned a challenge, project, meeting, or event, follow up on it naturally
 - Write like you're texting on WhatsApp — keep it real and conversational
-- Each starter should feel like you genuinely remember what you discussed`;
+- Each starter should feel like you genuinely remember what you discussed
+${contactData.user_context_note ? `- IMPORTANT: User just said they want to focus on: "${contactData.user_context_note}" — at least one starter MUST directly reflect this` : ''}`;
 
       prompt = `Generate 3 conversation starters to follow up with ${contactData.name}.
 
@@ -293,11 +297,12 @@ ${recentInteractions.join("\n")}
 
 Supporting context:
 ${secondaryContext.join("\n")}
+${contactData.user_context_note ? `\n🎯 USER'S CURRENT FOCUS:\n"${contactData.user_context_note}"\n(At least one starter must directly address this while staying natural)` : ''}
 
 Requirements:
 - Reference something SPECIFIC from the most recent interaction
 - Write like you're texting on WhatsApp — natural and conversational
-- NO generic corporate language`;
+- NO generic corporate language${contactData.user_context_note ? '\n- At least one starter must reflect the user\'s current focus above' : ''}`;
 
     // RULE 2: Notes only (no interaction history)
     } else if (contactData.notes && contactData.notes.trim().length > 0) {
@@ -326,7 +331,8 @@ For context_source = "notes":
 - Each starter MUST mention at least one specific detail from the notes (e.g., past company, current role, what you want to learn)
 - Reference concrete details: specific events, places, interests, projects, past work history
 - Write like you're texting on WhatsApp — keep it authentic
-- Show you remember specific things about them`;
+- Show you remember specific things about them
+${contactData.user_context_note ? `- IMPORTANT: User just said they want to focus on: "${contactData.user_context_note}" — at least one starter MUST directly reflect this` : ''}`;
 
       prompt = `Generate 3 conversation starters for ${contactData.name}.
 
@@ -335,12 +341,13 @@ ${contactData.notes}
 
 Supporting context:
 ${secondaryContext.join("\n")}
+${contactData.user_context_note ? `\n🎯 USER'S CURRENT FOCUS:\n"${contactData.user_context_note}"\n(At least one starter must directly address this while staying natural)` : ''}
 
 Requirements:
 - Pull SPECIFIC details from the notes (event names, past companies like SAP, current companies like Google, roles, what you want from them)
 - Write like you're texting on WhatsApp — natural and conversational
 - Show you remember specific details about your history and what they're doing now
-- NO corporate speak or generic openers`;
+- NO corporate speak or generic openers${contactData.user_context_note ? '\n- At least one starter must reflect the user\'s current focus above' : ''}`;
 
     // RULE 3: LinkedIn URL (infer from profile)
     } else if (contactData.linkedin_url && contactData.linkedin_url.trim().length > 0) {
@@ -367,19 +374,21 @@ For context_source = "linkedin":
 - Mention something natural (their role, what they lead, an obvious focus) in the starters
 - Reference their ACTUAL role or company in a natural, curious way
 - Write like you're texting on WhatsApp — genuine peer-to-peer tone
-- Ask about their work or recent moves without sounding like a recruiter`;
+- Ask about their work or recent moves without sounding like a recruiter
+${contactData.user_context_note ? `- IMPORTANT: User just said they want to focus on: "${contactData.user_context_note}" — at least one starter MUST directly reflect this` : ''}`;
 
       prompt = `Generate 3 conversation starters for ${contactData.name}.
 
 Context:
 ${secondaryContext.join("\n")}
 LinkedIn: ${contactData.linkedin_url}
+${contactData.user_context_note ? `\n🎯 USER'S CURRENT FOCUS:\n"${contactData.user_context_note}"\n(At least one starter must directly address this while staying natural)` : ''}
 
 Requirements:
 - Reference their current role or company in a natural, curious way
 - Write like you're texting on WhatsApp — genuine peer-to-peer tone
 - Ask about their work without sounding like a recruiter
-- NO corporate language or formal phrases`;
+- NO corporate language or formal phrases${contactData.user_context_note ? '\n- At least one starter must reflect the user\'s current focus above' : ''}`;
 
     // RULE 4: Fallback (minimal context)
     } else {
@@ -404,19 +413,21 @@ For context_source = "fallback":
 - Assume warm but low-context reconnect
 - Write 3 simple, friendly openers that don't pretend you remember specific details
 - Keep it warm but not overly familiar since you don't have detailed context
-- Reference their title/company if available, but keep it natural`;
+- Reference their title/company if available, but keep it natural
+${contactData.user_context_note ? `- IMPORTANT: User just said they want to focus on: "${contactData.user_context_note}" — at least one starter MUST directly reflect this` : ''}`;
 
       prompt = `Generate 3 warm conversation starters to reconnect with ${contactData.name}.
 
 Context:
 ${secondaryContext.join("\n")}
+${contactData.user_context_note ? `\n🎯 USER'S CURRENT FOCUS:\n"${contactData.user_context_note}"\n(At least one starter must directly address this while staying natural)` : ''}
 
 Requirements:
 - Create genuine, warm reconnection messages
 - Write like you're texting on WhatsApp — natural and human
 - Reference their ${contactData.title || "work"} ${contactData.company ? `at ${contactData.company}` : ""} if available
 - Keep it friendly and curious without being overly personal
-- NO corporate speak or generic templates`;
+- NO corporate speak or generic templates${contactData.user_context_note ? '\n- At least one starter must reflect the user\'s current focus above' : ''}`;
     }
 
     const modelName = "gpt-4o";

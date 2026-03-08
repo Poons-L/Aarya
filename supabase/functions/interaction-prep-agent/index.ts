@@ -119,12 +119,13 @@ Deno.serve(async (req: Request) => {
 
     let startersResponse;
     try {
-      // Pass the contact data directly to avoid DB lookup issues
+      // Pass the contact data and user_context_note to AI
       startersResponse = await generateConversationStarters(
         requestData.contact_id,
         authHeader,
         false,
-        contact
+        contact,
+        requestData.user_context_note
       );
     } catch (error) {
       console.error("Error generating starters:", error);
