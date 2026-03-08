@@ -39,6 +39,7 @@ interface InteractionPrepRequest {
     channel?: ChannelType;
   };
   user_context_note?: string;
+  forceRefresh?: boolean;
 }
 
 Deno.serve(async (req: Request) => {
@@ -128,11 +129,11 @@ Deno.serve(async (req: Request) => {
 
     let startersResponse;
     try {
-      // Pass the contact data and user_context_note to AI
+      // Pass the contact data, user_context_note, and forceRefresh to AI
       startersResponse = await generateConversationStarters(
         requestData.contact_id,
         authHeader,
-        false,
+        requestData.forceRefresh || false,
         contact,
         requestData.user_context_note
       );

@@ -148,6 +148,10 @@ export function NewContactDetailScreen({ contactId, onBack, onEditContact, onAdd
 
       const apiUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/interaction-prep-agent`;
 
+      // If user provided context, always force refresh to incorporate it
+      const hasUserContext = userContextNote.trim().length > 0;
+      const shouldForceRefresh = forceRefresh || hasUserContext;
+
       const requestData = {
         contact_id: contact.id,
         contact: contact,
@@ -157,7 +161,8 @@ export function NewContactDetailScreen({ contactId, onBack, onEditContact, onAdd
           datetime: new Date().toISOString(),
           channel: null
         },
-        user_context_note: userContextNote.trim() || undefined
+        user_context_note: userContextNote.trim() || undefined,
+        forceRefresh: shouldForceRefresh
       };
 
       console.log('🔍 [AI Prep] Contact object:', {
