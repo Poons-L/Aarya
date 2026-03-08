@@ -61,9 +61,16 @@ Deno.serve(async (req: Request) => {
 
     const requestData: InteractionPrepRequest = await req.json();
 
+    console.log('🔍 [Interaction Prep] Request received:', {
+      contact_id: requestData.contact_id,
+      user_id: user.id,
+      context: requestData.context
+    });
+
     if (!requestData.contact_id) {
+      console.error('❌ [Interaction Prep] Missing contact_id in request');
       return new Response(
-        JSON.stringify({ error: "contact_id is required" }),
+        JSON.stringify({ error: "Missing contact_id in request" }),
         {
           status: 400,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -71,16 +78,41 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    const contact = await getContact(requestData.contact_id);
-    if (!contact) {
+    if (typeof requestData.contact_id !== 'string' || requestData.contact_id.trim() === '') {
+      console.error('❌ [Interaction Prep] Invalid contact_id:', requestData.contact_id);
       return new Response(
-        JSON.stringify({ error: "Contact not found" }),
+        JSON.stringify({ error: "Invalid contact_id format" }),
+        {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        }
+      );
+    }
+
+    console.log('🔎 [Interaction Prep] Fetching contact:', requestData.contact_id);
+    const contact = await getContact(requestData.contact_id);
+
+    if (!contact) {
+      console.error('❌ [Interaction Prep] Contact not found:', {
+        contact_id: requestData.contact_id,
+        user_id: user.id
+      });
+      return new Response(
+        JSON.stringify({
+          error: `No contact found with id: ${requestData.contact_id}`,
+          contact_id: requestData.contact_id
+        }),
         {
           status: 404,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         }
       );
     }
+
+    console.log('✅ [Interaction Prep] Contact found:', {
+      id: contact.id,
+      name: contact.name
+    });
 
     const interactions = await getRecentInteractions(requestData.contact_id, 3);
     const notes = await getNotes(requestData.contact_id);

@@ -34,6 +34,8 @@ export interface ContextSource {
 }
 
 export async function getContact(contactId: string): Promise<Contact | null> {
+  console.log('🔍 [Toolkit] getContact called with ID:', contactId);
+
   const { data, error } = await supabaseAdmin
     .from("contacts")
     .select("id, name, company, title, email, phone, linkedin_url, interests, notes, tags, relationship, last_contacted")
@@ -41,9 +43,25 @@ export async function getContact(contactId: string): Promise<Contact | null> {
     .single();
 
   if (error) {
-    console.error("Error fetching contact:", error);
+    console.error("❌ [Toolkit] Error fetching contact:", {
+      contactId,
+      error: error.message,
+      details: error.details,
+      hint: error.hint,
+      code: error.code
+    });
     return null;
   }
+
+  if (!data) {
+    console.warn("⚠️ [Toolkit] No contact data returned for ID:", contactId);
+    return null;
+  }
+
+  console.log('✅ [Toolkit] Contact fetched successfully:', {
+    id: data.id,
+    name: data.name
+  });
 
   return data;
 }

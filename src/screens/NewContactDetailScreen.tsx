@@ -82,7 +82,12 @@ export function NewContactDetailScreen({ contactId, onBack, onEditContact, onAdd
         }
       };
 
-      console.log('Calling interaction-prep-agent with:', { apiUrl, requestData });
+      console.log('🔍 [AI Prep] Contact object:', {
+        id: contact.id,
+        name: contact.name,
+        fullContact: contact
+      });
+      console.log('🚀 [AI Prep] Calling interaction-prep-agent with:', { apiUrl, requestData });
 
       const response = await fetch(apiUrl, {
         method: 'POST',
@@ -94,10 +99,12 @@ export function NewContactDetailScreen({ contactId, onBack, onEditContact, onAdd
       });
 
       const data = await response.json();
-      console.log('Interaction prep response:', { status: response.status, data });
+      console.log('📥 [AI Prep] Response:', { status: response.status, data });
 
       if (response.status === 429) {
-        setAIStarters([data.message || 'Rate limit reached. Please try again later.']);
+        const errorMessage = data.message || 'Rate limit reached. Please try again later.';
+        console.error('❌ [AI Prep] Rate limit:', errorMessage);
+        setAIStarters([errorMessage]);
         setAiMetadata({
           dailyUsed: data.dailyUsed,
           dailyLimit: data.dailyLimit,
@@ -106,28 +113,30 @@ export function NewContactDetailScreen({ contactId, onBack, onEditContact, onAdd
         });
       } else if (response.ok) {
         if (data.starters && Array.isArray(data.starters)) {
+          console.log('✅ [AI Prep] Successfully received starters');
           setAIStarters(data.starters);
           setBriefingSummary(data.briefing_summary || '');
           setContextSource(data.context_source || '');
         } else if (data.error) {
-          console.error('AI error:', data.error);
-          setAIStarters([
-            'Unable to generate AI conversation starters.',
-            data.error
-          ]);
+          console.error('❌ [AI Prep] Error in response:', data.error);
+          setAIStarters([data.error]);
         }
+      } else if (response.status === 400) {
+        console.error('❌ [AI Prep] Bad request:', data);
+        setAIStarters([data.error || 'Invalid request. Please try again.']);
+      } else if (response.status === 404) {
+        console.error('❌ [AI Prep] Contact not found:', data);
+        setAIStarters([data.error || 'Contact not found.']);
       } else {
-        console.error('AI request failed:', response.status, data);
-        setAIStarters([
-          'Unable to generate AI conversation starters.',
-          data.error || data.message || `Error: ${response.status}`
-        ]);
+        console.error('❌ [AI Prep] Request failed:', { status: response.status, data });
+        setAIStarters([data.error || data.message || `Error: ${response.status}`]);
       }
     } catch (error) {
-      console.error('Error generating AI starters:', error);
+      console.error('❌ [AI Prep] Exception caught:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
       setAIStarters([
         'Error connecting to AI service.',
-        error instanceof Error ? error.message : 'Please try again later.'
+        errorMessage
       ]);
     } finally {
       setGeneratingAI(false);
