@@ -117,6 +117,15 @@ Deno.serve(async (req: Request) => {
     const interactions = await getRecentInteractions(requestData.contact_id, 3);
     const notes = await getNotes(requestData.contact_id);
 
+    console.log('🧠 [InteractionPrep TEST CONTEXT]', {
+      contact_name: contact.name,
+      notesPreview: contact.notes?.slice(0, 200),
+      userContextNote: requestData.user_context_note,
+      hasInteractions: interactions.length > 0,
+      interactionCount: interactions.length,
+      hasLinkedIn: !!contact.linkedin_url,
+    });
+
     let startersResponse;
     try {
       // Pass the contact data and user_context_note to AI

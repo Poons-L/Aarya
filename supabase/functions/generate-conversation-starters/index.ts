@@ -325,29 +325,30 @@ You receive:
 - context_source = notes
 
 For context_source = "notes":
-- Treat notes as a rough brain dump
-- Extract: how they know each other, what the other person does now (role/company), what the user wants (advice, tips, intro, collaboration)
-- Even if notes are short, make safe, reasonable inferences from role/company + relationship
-- Each starter MUST mention at least one specific detail from the notes (e.g., past company, current role, what you want to learn)
-- Reference concrete details: specific events, places, interests, projects, past work history
-- Write like you're texting on WhatsApp — keep it authentic
-- Show you remember specific things about them
-${contactData.user_context_note ? `- IMPORTANT: User just said they want to focus on: "${contactData.user_context_note}" — at least one starter MUST directly reflect this` : ''}`;
+HARD REQUIREMENTS (you MUST follow these):
+1. Extract 2-3 key facts from notes: how you know each other, where they work now (past company → current company), what you want to learn/do
+2. Each of your 3 starters MUST mention at least one of these facts
+3. Reference concrete details: specific company names, roles, events, what you want from them
+4. Write like you're texting on WhatsApp — keep it authentic and conversational
+5. Show you remember specific things about your shared history and what they're doing now
+${contactData.user_context_note ? `6. CRITICAL: User just said they want to focus on: "${contactData.user_context_note}" — at least one starter MUST directly reflect this` : ''}`;
 
       prompt = `Generate 3 conversation starters for ${contactData.name}.
 
-NOTES (base starters on these details):
+NOTES (you MUST base starters on these details):
 ${contactData.notes}
 
 Supporting context:
 ${secondaryContext.join("\n")}
-${contactData.user_context_note ? `\n🎯 USER'S CURRENT FOCUS:\n"${contactData.user_context_note}"\n(At least one starter must directly address this while staying natural)` : ''}
+${contactData.user_context_note ? `\n🎯 USER'S CURRENT FOCUS (at least one starter MUST address this):\n"${contactData.user_context_note}"\n` : ''}
 
-Requirements:
-- Pull SPECIFIC details from the notes (event names, past companies like SAP, current companies like Google, roles, what you want from them)
-- Write like you're texting on WhatsApp — natural and conversational
-- Show you remember specific details about your history and what they're doing now
-- NO corporate speak or generic openers${contactData.user_context_note ? '\n- At least one starter must reflect the user\'s current focus above' : ''}`;
+MANDATORY requirements:
+- Pull SPECIFIC details from the notes (e.g., "worked together at SAP", "now at Google", "leading channel programs", "want tips from him")
+- Each starter must mention at least one concrete fact from above
+- Write like you're texting on WhatsApp — natural, warm, peer-to-peer
+- Show you remember specifics about your history together and what they're doing now
+- NO generic lines like "Looking forward to connecting" or "Let's catch up" without specific context
+- NO corporate speak${contactData.user_context_note ? '\n- At least one starter must directly reflect the user\'s current focus shown above' : ''}`;
 
     // RULE 3: LinkedIn URL (infer from profile)
     } else if (contactData.linkedin_url && contactData.linkedin_url.trim().length > 0) {
@@ -432,6 +433,18 @@ Requirements:
 
     const modelName = "gpt-4o";
     console.log(`🤖 [Generate Starters] Using model: ${modelName}`);
+
+    console.log('🧩 [ConversationStarters PROMPT INPUT]', {
+      context_source: contextSource,
+      notesPreview: contactData.notes?.slice(0, 200),
+      userContextNote: contactData.user_context_note,
+      hasInteractionHistory: contactData.interaction_history && contactData.interaction_history.length > 0,
+      interactionCount: contactData.interaction_history?.length || 0,
+      hasLinkedIn: !!contactData.linkedin_url,
+      usingModel: modelName,
+      systemPromptLength: systemPrompt.length,
+      promptLength: prompt.length,
+    });
 
     const response = await fetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",
