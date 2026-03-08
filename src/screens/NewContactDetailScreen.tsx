@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ArrowLeft, Mail, Phone, Linkedin, MapPin, Calendar, Tag, CreditCard as Edit2, MessageCircle, Sparkles, Plus, Clock, Send, ExternalLink, CalendarPlus, Download, User, ChevronDown } from 'lucide-react';
+import { ArrowLeft, Mail, Phone, Linkedin, MapPin, Calendar, Tag, Pencil, MessageCircle, Sparkles, Plus, Clock, Send, ExternalLink, CalendarPlus, Download, User, ChevronDown } from 'lucide-react';
 import { useContacts } from '../hooks/useContacts';
 import { useAuth } from '../contexts/AuthContext';
 import { downloadVCard, generateHubSpotCSV, generateSalesforceCSV, downloadCSV, createMailtoLink, createCalendarEvent } from '../utils/contactExport';
@@ -78,6 +78,7 @@ export function NewContactDetailScreen({ contactId, onBack, onEditContact, onAdd
         notes: contact.notes,
         tags: contact.tags,
         interests: contact.interests,
+        linkedin_url: contact.linkedin_url,
         last_contacted: contact.last_contacted,
         contactId: contact.id,
         forceRefresh
@@ -234,7 +235,7 @@ export function NewContactDetailScreen({ contactId, onBack, onEditContact, onAdd
           }}
           className="text-orange-600 active:text-orange-800"
         >
-          <Edit2 size={20} />
+          <Pencil size={20} />
         </button>
       </div>
 

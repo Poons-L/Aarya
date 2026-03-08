@@ -20,6 +20,7 @@ interface ContactData {
   notes?: string;
   tags?: string[];
   interests?: string[];
+  linkedin_url?: string;
   last_contacted?: string;
   contactId?: string;
   forceRefresh?: boolean;
@@ -201,22 +202,29 @@ Deno.serve(async (req: Request) => {
       );
     }
 
+    const contextParts = [
+      `Name: ${contactData.name}`,
+      contactData.title ? `Title: ${contactData.title}` : "",
+      contactData.company ? `Company: ${contactData.company}` : "",
+      contactData.relationship ? `Relationship: ${contactData.relationship}` : "",
+      contactData.tags && contactData.tags.length > 0 ? `Tags: ${contactData.tags.join(", ")}` : "",
+      contactData.interests && contactData.interests.length > 0 ? `Interests: ${contactData.interests.join(", ")}` : "",
+      contactData.linkedin_url ? `LinkedIn: ${contactData.linkedin_url}` : "",
+      contactData.notes ? `Notes: ${contactData.notes}` : "",
+      contactData.last_contacted ? `Last contacted: ${contactData.last_contacted}` : "",
+    ].filter(Boolean);
+
     const prompt = `Generate 3 thoughtful, specific conversation starters for reconnecting with this contact:
 
-Name: ${contactData.name}
-${contactData.title ? `Title: ${contactData.title}` : ""}
-${contactData.company ? `Company: ${contactData.company}` : ""}
-${contactData.relationship ? `Relationship: ${contactData.relationship}` : ""}
-${contactData.tags && contactData.tags.length > 0 ? `Tags: ${contactData.tags.join(", ")}` : ""}
-${contactData.interests && contactData.interests.length > 0 ? `Interests: ${contactData.interests.join(", ")}` : ""}
-${contactData.notes ? `Notes: ${contactData.notes}` : ""}
-${contactData.last_contacted ? `Last contacted: ${contactData.last_contacted}` : ""}
+${contextParts.join("\n")}
 
 Requirements:
 - Make them personal and specific to this contact
+- Prioritize using information from their Notes, LinkedIn profile, and Interests to create relevant starters
+- If notes mention specific topics, events, or projects, reference those
+- If interests are listed, incorporate them naturally into conversation starters
 - Keep each starter under 100 characters
 - Focus on genuine connection, not just business
-- Reference their interests, work, or past interactions when possible
 - Return ONLY 3 starters, one per line
 - Do not number them or add bullet points`;
 

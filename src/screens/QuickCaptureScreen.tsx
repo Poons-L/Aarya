@@ -15,9 +15,13 @@ export function QuickCaptureScreen({ onBack, onComplete }: QuickCaptureScreenPro
   const [photoPreview, setPhotoPreview] = useState('');
   const [note, setNote] = useState('');
   const [isRecording, setIsRecording] = useState(false);
+  const [isRecordingName, setIsRecordingName] = useState(false);
   const [transcribing, setTranscribing] = useState(false);
+  const [transcribingName, setTranscribingName] = useState(false);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const nameRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
+  const nameAudioChunksRef = useRef<Blob[]>([]);
 
   const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -64,8 +68,13 @@ export function QuickCaptureScreen({ onBack, onComplete }: QuickCaptureScreenPro
     }
   };
 
-  const transcribeAudio = async (audioBlob: Blob) => {
-    setTranscribing(true);
+  const transcribeAudio = async (audioBlob: Blob, forName = false) => {
+    if (forName) {
+      setTranscribingName(true);
+    } else {
+      setTranscribing(true);
+    }
+
     try {
       const reader = new FileReader();
       reader.readAsDataURL(audioBlob);
@@ -82,14 +91,56 @@ export function QuickCaptureScreen({ onBack, onComplete }: QuickCaptureScreenPro
         if (error) throw error;
 
         if (data?.transcript) {
-          setNote(prev => prev ? `${prev}\n\n${data.transcript}` : data.transcript);
+          if (forName) {
+            setName(data.transcript.trim());
+          } else {
+            setNote(prev => prev ? `${prev}\n\n${data.transcript}` : data.transcript);
+          }
         }
       };
     } catch (error) {
       console.error('Error transcribing audio:', error);
       alert('Failed to transcribe audio. Please try typing instead.');
     } finally {
-      setTranscribing(false);
+      if (forName) {
+        setTranscribingName(false);
+      } else {
+        setTranscribing(false);
+      }
+    }
+  };
+
+  const toggleNameRecording = async () => {
+    if (!isRecordingName) {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        const mediaRecorder = new MediaRecorder(stream);
+        nameRecorderRef.current = mediaRecorder;
+        nameAudioChunksRef.current = [];
+
+        mediaRecorder.ondataavailable = (event) => {
+          if (event.data.size > 0) {
+            nameAudioChunksRef.current.push(event.data);
+          }
+        };
+
+        mediaRecorder.onstop = async () => {
+          stream.getTracks().forEach(track => track.stop());
+          const audioBlob = new Blob(nameAudioChunksRef.current, { type: 'audio/webm' });
+          await transcribeAudio(audioBlob, true);
+        };
+
+        mediaRecorder.start();
+        setIsRecordingName(true);
+      } catch (error) {
+        console.error('Error starting name recording:', error);
+        alert('Failed to access microphone. Please grant permission and try again.');
+      }
+    } else {
+      if (nameRecorderRef.current && nameRecorderRef.current.state !== 'inactive') {
+        nameRecorderRef.current.stop();
+        setIsRecordingName(false);
+      }
     }
   };
 
@@ -159,15 +210,51 @@ export function QuickCaptureScreen({ onBack, onComplete }: QuickCaptureScreenPro
             <label className="block text-sm font-medium text-slate-700 mb-3">
               Name <span className="text-red-500">*</span>
             </label>
-            <input
-              type="text"
-              required
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="Enter name..."
-              autoFocus
-              className="w-full px-4 py-4 bg-slate-50 border border-slate-200 rounded-xl text-lg focus:outline-none focus:ring-2 focus:ring-orange-400 focus:border-transparent"
-            />
+            <div className="space-y-3">
+              <input
+                type="text"
+                required
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="Enter name..."
+                autoFocus
+                className="w-full px-4 py-4 bg-slate-50 border border-slate-200 rounded-xl text-lg focus:outline-none focus:ring-2 focus:ring-orange-400 focus:border-transparent"
+              />
+              <button
+                type="button"
+                onClick={toggleNameRecording}
+                disabled={transcribingName || isRecording || transcribing}
+                className={`w-full flex items-center justify-center gap-2 py-3 rounded-xl font-medium transition-all disabled:opacity-50 ${
+                  isRecordingName
+                    ? 'bg-red-500 text-white animate-pulse'
+                    : transcribingName
+                    ? 'bg-slate-400 text-white'
+                    : 'bg-gradient-to-r from-blue-500 to-purple-500 text-white'
+                } active:scale-98`}
+              >
+                {transcribingName ? (
+                  <>
+                    <Mic size={20} className="animate-spin" />
+                    Transcribing Name...
+                  </>
+                ) : isRecordingName ? (
+                  <>
+                    <StopCircle size={20} />
+                    Stop Recording
+                  </>
+                ) : (
+                  <>
+                    <Mic size={20} />
+                    Say Name
+                  </>
+                )}
+              </button>
+              {isRecordingName && (
+                <p className="text-xs text-slate-500 text-center">
+                  Speak the contact's name clearly.
+                </p>
+              )}
+            </div>
           </div>
 
           <div className="bg-white rounded-2xl p-6 shadow-sm border border-slate-200">
@@ -185,7 +272,7 @@ export function QuickCaptureScreen({ onBack, onComplete }: QuickCaptureScreenPro
               <button
                 type="button"
                 onClick={toggleRecording}
-                disabled={transcribing}
+                disabled={transcribing || isRecordingName || transcribingName}
                 className={`w-full flex items-center justify-center gap-2 py-3 rounded-xl font-medium transition-all disabled:opacity-50 ${
                   isRecording
                     ? 'bg-red-500 text-white animate-pulse'
@@ -236,7 +323,7 @@ export function QuickCaptureScreen({ onBack, onComplete }: QuickCaptureScreenPro
         <button
           type="submit"
           onClick={handleSubmit}
-          disabled={loading || !name.trim() || isRecording || transcribing}
+          disabled={loading || !name.trim() || isRecording || transcribing || isRecordingName || transcribingName}
           className="w-full bg-gradient-to-r from-orange-500 to-pink-500 text-white py-4 rounded-xl font-semibold text-lg disabled:opacity-50 disabled:cursor-not-allowed active:scale-98 transition-transform"
         >
           {loading ? 'Saving...' : 'Save Contact'}
