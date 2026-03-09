@@ -118,6 +118,7 @@ Deno.serve(async (req: Request) => {
       contact.starters_generated_at &&
       new Date(contact.starters_generated_at) > cacheExpiryDate;
 
+    // Bypass cache when forceRefresh is true
     if (hasFreshCache && !contactData.forceRefresh) {
       const generatedAt = new Date(contact.starters_generated_at);
       const daysAgo = Math.floor((now.getTime() - generatedAt.getTime()) / (1000 * 60 * 60 * 24));
@@ -310,6 +311,8 @@ Requirements:
       contextSource = 'notes';
       console.log('✅ [Generate Starters] Using context_source: notes (length:', contactData.notes.length, 'chars)');
 
+      const hasUserContext = !!contactData.user_context_note?.trim();
+
       systemPrompt = `You are Re.Me, a personal networking memory that writes WhatsApp-style openers.
 
 General rules:
@@ -326,21 +329,27 @@ You receive:
 
 For context_source = "notes":
 HARD REQUIREMENTS (you MUST follow these):
-1. Extract 2-3 key facts from notes: how you know each other, where they work now (past company → current company), what you want to learn/do
-2. Each of your 3 starters MUST mention at least one of these facts
-3. Reference concrete details: specific company names, roles, events, what you want from them
-4. Write like you're texting on WhatsApp — keep it authentic and conversational
-5. Show you remember specific things about your shared history and what they're doing now
-${contactData.user_context_note ? `6. CRITICAL: User just said they want to focus on: "${contactData.user_context_note}" — at least one starter MUST directly reflect this` : ''}`;
+1. You MUST base all starters on concrete details from the contact's notes.
+2. You MUST avoid generic starters with no specific detail.
+${hasUserContext ? '3. CRITICAL: At least one starter MUST directly reflect the user_context_note.' : ''}
+4. Extract 2-3 key facts from notes: how you know each other, where they work now (past company → current company), what you want to learn/do
+5. Each of your 3 starters MUST mention at least one of these facts
+6. Reference concrete details: specific company names, roles, events, what you want from them
+7. Write like you're texting on WhatsApp — keep it authentic and conversational
+8. Show you remember specific things about your shared history and what they're doing now`;
 
       prompt = `Generate 3 conversation starters for ${contactData.name}.
 
-NOTES (you MUST base starters on these details):
+CONTACT NOTES:
 ${contactData.notes}
 
-Supporting context:
+${hasUserContext ? `🎯 USER'S CURRENT FOCUS:
+${contactData.user_context_note}
+
+At least one starter must directly reflect the user's current focus above.
+
+` : ''}Supporting context:
 ${secondaryContext.join("\n")}
-${contactData.user_context_note ? `\n🎯 USER'S CURRENT FOCUS (at least one starter MUST address this):\n"${contactData.user_context_note}"\n` : ''}
 
 MANDATORY requirements:
 - Pull SPECIFIC details from the notes (e.g., "worked together at SAP", "now at Google", "leading channel programs", "want tips from him")
@@ -348,7 +357,7 @@ MANDATORY requirements:
 - Write like you're texting on WhatsApp — natural, warm, peer-to-peer
 - Show you remember specifics about your history together and what they're doing now
 - NO generic lines like "Looking forward to connecting" or "Let's catch up" without specific context
-- NO corporate speak${contactData.user_context_note ? '\n- At least one starter must directly reflect the user\'s current focus shown above' : ''}`;
+- NO corporate speak${hasUserContext ? '\n- At least one starter must directly reflect the user\'s current focus shown above' : ''}`;
 
     // RULE 3: LinkedIn URL (infer from profile)
     } else if (contactData.linkedin_url && contactData.linkedin_url.trim().length > 0) {
@@ -438,6 +447,7 @@ Requirements:
       context_source: contextSource,
       notesPreview: contactData.notes?.slice(0, 200),
       userContextNote: contactData.user_context_note,
+      forceRefresh: contactData.forceRefresh,
       hasInteractionHistory: contactData.interaction_history && contactData.interaction_history.length > 0,
       interactionCount: contactData.interaction_history?.length || 0,
       hasLinkedIn: !!contactData.linkedin_url,

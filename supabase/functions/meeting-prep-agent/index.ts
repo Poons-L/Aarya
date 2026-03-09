@@ -125,11 +125,13 @@ Deno.serve(async (req: Request) => {
 
     let startersResponse;
     try {
-      startersResponse = await generateConversationStarters(
-        requestData.contact_id,
-        authHeader,
-        false
-      );
+      startersResponse = await generateConversationStarters({
+        contactId: requestData.contact_id,
+        authToken: authHeader,
+        forceRefresh: false,
+        contactData: contact,
+        userContextNote: null,
+      });
     } catch (error) {
       console.error("Error generating starters:", error);
       startersResponse = {
