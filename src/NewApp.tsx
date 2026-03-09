@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { WelcomeScreen } from './screens/WelcomeScreen';
 import { OnboardingScreen } from './screens/OnboardingScreen';
 import { AuthScreen } from './screens/AuthScreen';
+import { ResetPasswordScreen } from './screens/ResetPasswordScreen';
 import { NewHomeScreen } from './screens/NewHomeScreen';
 import { NewContactsScreen } from './screens/NewContactsScreen';
 import { NewContactDetailScreen } from './screens/NewContactDetailScreen';
@@ -18,7 +19,7 @@ import { useReminders } from './hooks/useReminders';
 type Tab = 'home' | 'contacts' | 'reminders' | 'profile';
 
 interface NavState {
-  screen: 'welcome' | 'onboarding' | 'auth' | 'home' | 'contacts' | 'contactDetail' | 'addContact' | 'editContact' | 'quickCapture' | 'reminders' | 'addReminder' | 'profile' | 'admin';
+  screen: 'welcome' | 'onboarding' | 'auth' | 'resetPassword' | 'home' | 'contacts' | 'contactDetail' | 'addContact' | 'editContact' | 'quickCapture' | 'reminders' | 'addReminder' | 'profile' | 'admin';
   contactId?: string | null;
 }
 
@@ -38,7 +39,16 @@ function NewApp() {
   }, [navState]);
 
   useEffect(() => {
-    if (!user && navState.screen !== 'welcome' && navState.screen !== 'onboarding' && navState.screen !== 'auth') {
+    const hash = window.location.hash;
+    if (hash && hash.includes('type=recovery')) {
+      console.log('Password reset link detected, showing reset password screen');
+      setNavState({ screen: 'resetPassword', contactId: null });
+      setHistory([]);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!user && navState.screen !== 'welcome' && navState.screen !== 'onboarding' && navState.screen !== 'auth' && navState.screen !== 'resetPassword') {
       setNavState({ screen: 'welcome', contactId: null });
       setHistory([]);
     }
@@ -97,6 +107,14 @@ function NewApp() {
       onAuth={() => {
         console.log('Auth: onAuth success');
         setNavState({ screen: 'home', contactId: null });
+      }}
+    />;
+  } else if (navState.screen === 'resetPassword') {
+    screenContent = <ResetPasswordScreen
+      onComplete={() => {
+        console.log('ResetPassword: onComplete clicked');
+        window.location.hash = '';
+        setNavState({ screen: 'auth', contactId: null });
       }}
     />;
   } else if (navState.screen === 'home') {
