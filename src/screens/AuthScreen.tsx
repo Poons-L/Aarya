@@ -8,14 +8,16 @@ interface AuthScreenProps {
 }
 
 export function AuthScreen({ onBack }: AuthScreenProps) {
-  const { signIn, signUp, signInWithGoogle } = useAuth();
+  const { signIn, signUp, signInWithGoogle, resetPassword } = useAuth();
   const [isSignUp, setIsSignUp] = useState(false);
+  const [isForgotPassword, setIsForgotPassword] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [fullName, setFullName] = useState('');
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -82,6 +84,34 @@ export function AuthScreen({ onBack }: AuthScreenProps) {
     }
   };
 
+  const handleForgotPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError(null);
+    setSuccessMessage(null);
+
+    if (!email) {
+      setError('Please enter your email address');
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      const { error } = await resetPassword(email);
+      if (error) throw error;
+
+      setSuccessMessage('Password reset email sent! Check your inbox.');
+      setTimeout(() => {
+        setIsForgotPassword(false);
+        setSuccessMessage(null);
+      }, 3000);
+    } catch (err: any) {
+      setError(`Failed to send reset email: ${err.message}`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div className="h-full bg-white flex flex-col">
       <div className="px-6 py-4 flex items-center border-b border-slate-200">
@@ -92,10 +122,12 @@ export function AuthScreen({ onBack }: AuthScreenProps) {
 
       <div className="flex-1 px-8 py-12 overflow-y-auto">
         <h2 className="text-3xl font-bold text-slate-900 mb-2">
-          {isSignUp ? 'Create Account' : 'Welcome Back'}
+          {isForgotPassword ? 'Reset Password' : isSignUp ? 'Create Account' : 'Welcome Back'}
         </h2>
         <p className="text-slate-600 mb-8">
-          {isSignUp
+          {isForgotPassword
+            ? 'Enter your email to receive a password reset link'
+            : isSignUp
             ? 'Start building your professional network'
             : 'Sign in to access your contacts'}
         </p>
@@ -107,7 +139,53 @@ export function AuthScreen({ onBack }: AuthScreenProps) {
           </div>
         )}
 
-        <form onSubmit={handleSubmit} className="space-y-5">
+        {successMessage && (
+          <div className="mb-4 p-4 bg-green-50 border-2 border-green-200 rounded-xl flex items-center gap-3">
+            <AlertCircle size={20} className="text-green-600 flex-shrink-0" />
+            <span className="text-sm text-green-700">{successMessage}</span>
+          </div>
+        )}
+
+        {isForgotPassword ? (
+          <form onSubmit={handleForgotPassword} className="space-y-5">
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-2">
+                Email Address
+              </label>
+              <div className="relative">
+                <Mail size={20} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
+                <input
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="you@example.com"
+                  className="w-full pl-12 pr-4 py-4 border-2 border-slate-200 rounded-xl focus:border-orange-500 focus:outline-none transition-colors"
+                />
+              </div>
+            </div>
+
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full bg-orange-500 text-white font-semibold py-4 rounded-xl shadow-lg active:scale-95 transition-transform disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {loading ? 'Sending...' : 'Send Reset Link'}
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                setIsForgotPassword(false);
+                setError(null);
+                setSuccessMessage(null);
+              }}
+              className="w-full text-sm text-slate-600 font-medium"
+            >
+              Back to Sign In
+            </button>
+          </form>
+        ) : (
+          <form onSubmit={handleSubmit} className="space-y-5">
           {isSignUp && (
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-2">
@@ -158,7 +236,14 @@ export function AuthScreen({ onBack }: AuthScreenProps) {
 
           {!isSignUp && (
             <div className="flex justify-end">
-              <button type="button" className="text-sm text-orange-600 font-medium">
+              <button
+                type="button"
+                onClick={() => {
+                  setIsForgotPassword(true);
+                  setError(null);
+                }}
+                className="text-sm text-orange-600 font-medium"
+              >
                 Forgot Password?
               </button>
             </div>
@@ -195,26 +280,29 @@ export function AuthScreen({ onBack }: AuthScreenProps) {
             </svg>
             {googleLoading ? 'Redirecting...' : 'Continue with Google'}
           </button>
-        </form>
+          </form>
+        )}
 
-        <div className="mt-8 text-center">
-          <button
-            onClick={() => setIsSignUp(!isSignUp)}
-            className="text-slate-600"
-          >
-            {isSignUp ? (
-              <>
-                Already have an account?{' '}
-                <span className="text-orange-600 font-semibold">Sign In</span>
-              </>
-            ) : (
-              <>
-                Don't have an account?{' '}
-                <span className="text-orange-600 font-semibold">Sign Up</span>
-              </>
-            )}
-          </button>
-        </div>
+        {!isForgotPassword && (
+          <div className="mt-8 text-center">
+            <button
+              onClick={() => setIsSignUp(!isSignUp)}
+              className="text-slate-600"
+            >
+              {isSignUp ? (
+                <>
+                  Already have an account?{' '}
+                  <span className="text-orange-600 font-semibold">Sign In</span>
+                </>
+              ) : (
+                <>
+                  Don't have an account?{' '}
+                  <span className="text-orange-600 font-semibold">Sign Up</span>
+                </>
+              )}
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );
