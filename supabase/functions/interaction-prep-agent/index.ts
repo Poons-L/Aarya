@@ -76,13 +76,14 @@ Deno.serve(async (req: Request) => {
     }
 
     const requestData: InteractionPrepRequest = await req.json();
-    const { contact_id, contact: uiContact, user_context_note, forceRefresh } = requestData;
 
-    console.log('🚀 [AI Prep] Request payload:', {
-      contactId: contact_id,
-      forceRefresh,
-      hasUserContext: !!user_context_note?.trim(),
-      userContextNote: user_context_note,
+    console.log('🔍 [Interaction Prep] Request received:', {
+      contact_id: requestData.contact_id,
+      contact_name: requestData.contact?.name,
+      user_id: user.id,
+      context: requestData.context,
+      hasUserContextNote: !!requestData.user_context_note,
+      userContextNotePreview: requestData.user_context_note ? requestData.user_context_note.substring(0, 50) : null
     });
 
     if (!requestData.contact_id || !requestData.contact) {
@@ -129,13 +130,13 @@ Deno.serve(async (req: Request) => {
     let startersResponse;
     try {
       // Pass the contact data, user_context_note, and forceRefresh to AI
-      startersResponse = await generateConversationStarters({
-        contactId: contact_id,
-        authToken: authHeader,
-        forceRefresh: !!forceRefresh,
-        contactData: contact,
-        userContextNote: user_context_note || null,
-      });
+      startersResponse = await generateConversationStarters(
+        requestData.contact_id,
+        authHeader,
+        requestData.forceRefresh || false,
+        contact,
+        requestData.user_context_note
+      );
     } catch (error) {
       console.error("Error generating starters:", error);
       startersResponse = {

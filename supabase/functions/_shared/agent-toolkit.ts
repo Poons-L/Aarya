@@ -109,19 +109,13 @@ export interface ConversationStartersResponse {
   daysAgo?: number;
 }
 
-export async function generateConversationStarters({
-  contactId,
-  authToken,
-  forceRefresh,
-  contactData,
-  userContextNote,
-}: {
-  contactId: string;
-  authToken: string;
-  forceRefresh?: boolean;
-  contactData?: Contact;
-  userContextNote?: string | null;
-}): Promise<ConversationStartersResponse> {
+export async function generateConversationStarters(
+  contactId: string,
+  authToken: string,
+  forceRefresh: boolean = false,
+  contactData?: Contact,
+  userContextNote?: string
+): Promise<ConversationStartersResponse> {
   // Use provided contact data or fetch from DB
   const contact = contactData || await getContact(contactId);
   if (!contact) {
@@ -142,7 +136,6 @@ export async function generateConversationStarters({
     hasLinkedIn: !!contact.linkedin_url,
     hasUserContextNote: !!userContextNote,
     userContextNotePreview: userContextNote ? userContextNote.substring(0, 50) : null,
-    forceRefresh: !!forceRefresh,
   });
 
   const response = await fetch(
@@ -166,7 +159,7 @@ export async function generateConversationStarters({
         last_contacted: contact.last_contacted,
         interaction_history: interactions,
         user_context_note: userContextNote,
-        forceRefresh: !!forceRefresh,
+        forceRefresh,
       }),
     }
   );

@@ -148,8 +148,9 @@ export function NewContactDetailScreen({ contactId, onBack, onEditContact, onAdd
 
       const apiUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/interaction-prep-agent`;
 
-      // Compute hasUserContext flag and always force refresh when context exists
-      const hasUserContext = !!userContextNote?.trim();
+      // If user provided context, always force refresh to incorporate it
+      const hasUserContext = userContextNote.trim().length > 0;
+      const shouldForceRefresh = forceRefresh || hasUserContext;
 
       const requestData = {
         contact_id: contact.id,
@@ -160,8 +161,8 @@ export function NewContactDetailScreen({ contactId, onBack, onEditContact, onAdd
           datetime: new Date().toISOString(),
           channel: null
         },
-        user_context_note: userContextNote,
-        forceRefresh: hasUserContext
+        user_context_note: userContextNote.trim() || undefined,
+        forceRefresh: shouldForceRefresh
       };
 
       console.log('🔍 [AI Prep] Contact object:', {
@@ -172,10 +173,12 @@ export function NewContactDetailScreen({ contactId, onBack, onEditContact, onAdd
         notesPreview: contact.notes ? contact.notes.substring(0, 100) : 'NO NOTES IN UI'
       });
       console.log('🚀 [AI Prep] Request payload:', {
-        contactId: requestData.contact_id,
-        forceRefresh: requestData.forceRefresh,
-        hasUserContext: hasUserContext,
+        contact_id: requestData.contact_id,
+        hasUserContextNote: !!requestData.user_context_note,
         userContextNote: requestData.user_context_note,
+        forceRefresh: requestData.forceRefresh,
+        shouldForceRefresh,
+        hasUserContext,
         context: requestData.context
       });
 
