@@ -5,9 +5,10 @@ import { useAuth } from '../contexts/AuthContext';
 interface AuthScreenProps {
   onBack: () => void;
   onAuth: () => void;
+  initialError?: string | null;
 }
 
-export function AuthScreen({ onBack }: AuthScreenProps) {
+export function AuthScreen({ onBack, initialError }: AuthScreenProps) {
   const { signIn, signUp, signInWithGoogle, resetPassword } = useAuth();
   const [isSignUp, setIsSignUp] = useState(false);
   const [isForgotPassword, setIsForgotPassword] = useState(false);
@@ -16,7 +17,7 @@ export function AuthScreen({ onBack }: AuthScreenProps) {
   const [fullName, setFullName] = useState('');
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(initialError || null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {

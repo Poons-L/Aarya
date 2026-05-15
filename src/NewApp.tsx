@@ -38,21 +38,45 @@ function NewApp() {
     console.log('navState changed:', navState);
   }, [navState]);
 
+  const [oauthError, setOauthError] = useState<string | null>(null);
+
   useEffect(() => {
     const hash = window.location.hash;
     if (hash && hash.includes('type=recovery')) {
       console.log('Password reset link detected, showing reset password screen');
       setNavState({ screen: 'resetPassword', contactId: null });
       setHistory([]);
+      return;
+    }
+
+    const params = new URLSearchParams(window.location.search);
+    const errorParam = params.get('error_description') || params.get('error');
+    if (errorParam) {
+      setOauthError(decodeURIComponent(errorParam));
+      window.history.replaceState({}, '', window.location.pathname);
+    }
+
+    if (hash) {
+      const hashParams = new URLSearchParams(hash.substring(1));
+      const hashError = hashParams.get('error_description') || hashParams.get('error');
+      if (hashError) {
+        setOauthError(decodeURIComponent(hashError));
+        window.history.replaceState({}, '', window.location.pathname);
+      }
     }
   }, []);
 
   useEffect(() => {
     if (!user && navState.screen !== 'welcome' && navState.screen !== 'onboarding' && navState.screen !== 'auth' && navState.screen !== 'resetPassword') {
-      setNavState({ screen: 'welcome', contactId: null });
+      if (oauthError) {
+        setNavState({ screen: 'auth', contactId: null });
+      } else {
+        setNavState({ screen: 'welcome', contactId: null });
+      }
       setHistory([]);
     }
     if (user && (navState.screen === 'welcome' || navState.screen === 'onboarding' || navState.screen === 'auth')) {
+      setOauthError(null);
       setNavState({ screen: 'home', contactId: null });
       setHistory([]);
     }
@@ -108,6 +132,7 @@ function NewApp() {
         console.log('Auth: onAuth success');
         setNavState({ screen: 'home', contactId: null });
       }}
+      initialError={oauthError}
     />;
   } else if (navState.screen === 'resetPassword') {
     screenContent = <ResetPasswordScreen
