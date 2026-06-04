@@ -1,7 +1,8 @@
-import { useState, useRef } from 'react';
-import { ArrowLeft, Mail, Phone, Linkedin, MapPin, Calendar, Tag, Pencil, MessageCircle, Sparkles, Plus, Clock, Send, ExternalLink, CalendarPlus, Download, User, ChevronDown, Mic, MicOff } from 'lucide-react';
+import { useState, useRef, useEffect } from 'react';
+import { ArrowLeft, Mail, Phone, Linkedin, MapPin, Calendar, Tag, Pencil, MessageCircle, Sparkles, Plus, Clock, Send, ExternalLink, CalendarPlus, Download, User, ChevronDown, Mic, MicOff, AlertTriangle, RefreshCw } from 'lucide-react';
 import { useContacts } from '../hooks/useContacts';
 import { useAuth } from '../contexts/AuthContext';
+import { useTalkingPoints } from '../hooks/useTalkingPoints';
 import { downloadVCard, generateHubSpotCSV, generateSalesforceCSV, downloadCSV, createMailtoLink, createCalendarEvent } from '../utils/contactExport';
 
 interface NewContactDetailScreenProps {
@@ -11,23 +12,41 @@ interface NewContactDetailScreenProps {
   onAddReminder: (contactId: string) => void;
 }
 
+function SourceChip({ label }: { label: string }) {
+  const colors: Record<string, string> = {
+    'Contact Record': 'bg-blue-50 text-blue-700 border-blue-200',
+    'LinkedIn': 'bg-sky-50 text-sky-700 border-sky-200',
+    'Meeting Notes': 'bg-green-50 text-green-700 border-green-200',
+    'Interaction History': 'bg-amber-50 text-amber-700 border-amber-200',
+    'User Context': 'bg-pink-50 text-pink-700 border-pink-200',
+  };
+  const colorClass = colors[label] || 'bg-slate-50 text-slate-600 border-slate-200';
+  return (
+    <span className={`px-1.5 py-0.5 text-[10px] font-medium rounded border ${colorClass}`}>
+      {label}
+    </span>
+  );
+}
+
+function ConfidenceBadge({ confidence }: { confidence: 'low' | 'medium' | 'high' }) {
+  const styles: Record<string, string> = {
+    high: 'bg-green-100 text-green-700',
+    medium: 'bg-amber-100 text-amber-700',
+    low: 'bg-slate-100 text-slate-600',
+  };
+  return (
+    <span className={`px-2 py-0.5 text-[10px] font-semibold rounded-full ${styles[confidence]}`}>
+      {confidence}
+    </span>
+  );
+}
+
 export function NewContactDetailScreen({ contactId, onBack, onEditContact, onAddReminder }: NewContactDetailScreenProps) {
   const { contacts, updateContact } = useContacts();
   const { session } = useAuth();
+  const { loading: talkingPointsLoading, result: talkingPointsResult, error: talkingPointsError, generate: generateTalkingPoints, enrichContact, reset: resetTalkingPoints } = useTalkingPoints();
   const contact = contacts.find(c => c.id === contactId);
-  const [showAIStarters, setShowAIStarters] = useState(false);
-  const [generatingAI, setGeneratingAI] = useState(false);
-  const [aiStarters, setAIStarters] = useState<string[]>([]);
-  const [briefingSummary, setBriefingSummary] = useState<string>('');
-  const [contextSource, setContextSource] = useState<string>('');
-  const [aiMetadata, setAiMetadata] = useState<{
-    cached?: boolean;
-    daysAgo?: number;
-    dailyUsed?: number;
-    dailyLimit?: number | null;
-    monthlyUsed?: number;
-    monthlyLimit?: number | null;
-  }>({});
+  const [showTalkingPoints, setShowTalkingPoints] = useState(false);
   const [newInteraction, setNewInteraction] = useState('');
   const [showAddInteraction, setShowAddInteraction] = useState(false);
   const [showCRMExport, setShowCRMExport] = useState(false);
@@ -135,106 +154,17 @@ export function NewContactDetailScreen({ contactId, onBack, onEditContact, onAdd
     }
   };
 
-  const generateAIStarters = async (forceRefresh = false) => {
-    setGeneratingAI(true);
-    setShowAIStarters(true);
-
-    try {
-      if (!session?.access_token) {
-        setAIStarters(['Please sign in to use AI features.']);
-        setGeneratingAI(false);
-        return;
-      }
-
-      const apiUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/interaction-prep-agent`;
-
-      // If user provided context, always force refresh to incorporate it
-      const hasUserContext = userContextNote.trim().length > 0;
-      const shouldForceRefresh = forceRefresh || hasUserContext;
-
-      const requestData = {
-        contact_id: contact.id,
-        contact: contact,
-        context: {
-          context_type: "generic_checkin" as const,
-          title: contact.name,
-          datetime: new Date().toISOString(),
-          channel: null
-        },
-        user_context_note: userContextNote.trim() || undefined,
-        forceRefresh: shouldForceRefresh
-      };
-
-      console.log('🔍 [AI Prep] Contact object:', {
-        id: contact.id,
-        name: contact.name,
-        hasNotes: !!contact.notes,
-        notesLength: contact.notes?.length || 0,
-        notesPreview: contact.notes ? contact.notes.substring(0, 100) : 'NO NOTES IN UI'
-      });
-      console.log('🚀 [AI Prep] Request payload:', {
-        contact_id: requestData.contact_id,
-        hasUserContextNote: !!requestData.user_context_note,
-        userContextNote: requestData.user_context_note,
-        forceRefresh: requestData.forceRefresh,
-        shouldForceRefresh,
-        hasUserContext,
-        context: requestData.context
-      });
-
-      const response = await fetch(apiUrl, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${session.access_token}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(requestData)
-      });
-
-      const data = await response.json();
-      console.log('📥 [AI Prep] Response:', { status: response.status, data });
-
-      if (response.status === 429) {
-        const errorMessage = data.message || 'Rate limit reached. Please try again later.';
-        console.error('❌ [AI Prep] Rate limit:', errorMessage);
-        setAIStarters([errorMessage]);
-        setAiMetadata({
-          dailyUsed: data.dailyUsed,
-          dailyLimit: data.dailyLimit,
-          monthlyUsed: data.monthlyUsed,
-          monthlyLimit: data.monthlyLimit,
-        });
-      } else if (response.ok) {
-        if (data.starters && Array.isArray(data.starters)) {
-          console.log('✅ [AI Prep] Successfully received starters');
-          setAIStarters(data.starters);
-          setBriefingSummary(data.briefing_summary || '');
-          setContextSource(data.context_source || '');
-        } else if (data.error) {
-          console.error('❌ [AI Prep] Error in response:', data.error);
-          setAIStarters([data.error]);
-        }
-      } else if (response.status === 400) {
-        console.error('❌ [AI Prep] Bad request:', data);
-        setAIStarters([data.error || 'Invalid request. Please try again.']);
-      } else if (response.status === 404) {
-        console.error('❌ [AI Prep] Contact not found:', data);
-        setAIStarters([data.error || 'Contact not found.']);
-      } else {
-        console.error('❌ [AI Prep] Request failed:', { status: response.status, data });
-        setAIStarters([data.error || data.message || `Error: ${response.status}`]);
-      }
-    } catch (error) {
-      console.error('❌ [AI Prep] Exception caught:', error);
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
-      setAIStarters([
-        'Error connecting to AI service.',
-        errorMessage
-      ]);
-    } finally {
-      setGeneratingAI(false);
-    }
+  const handleGenerateTalkingPoints = async (forceRefresh = false) => {
+    setShowTalkingPoints(true);
+    await generateTalkingPoints(contactId, userContextNote, forceRefresh);
   };
+
+  // Trigger enrichment when contact has LinkedIn URL but hasn't been enriched
+  useEffect(() => {
+    if (contact && contact.linkedin_url && !contact.enrichment_status) {
+      enrichContact(contactId);
+    }
+  }, [contact?.linkedin_url, contact?.enrichment_status, contactId, enrichContact]);
 
   const addInteractionNote = async () => {
     if (!newInteraction.trim()) return;
@@ -273,16 +203,6 @@ export function NewContactDetailScreen({ contactId, onBack, onEditContact, onAdd
       hour: 'numeric',
       minute: '2-digit'
     });
-  };
-
-  const getContextSourceLabel = (source: string): string => {
-    const labels: Record<string, string> = {
-      'interaction_history': 'History',
-      'notes': 'Notes',
-      'linkedin': 'LinkedIn',
-      'fallback': 'Fallback'
-    };
-    return labels[source] || source;
   };
 
   const handleSendEmail = () => {
@@ -413,7 +333,7 @@ export function NewContactDetailScreen({ contactId, onBack, onEditContact, onAdd
                   value={userContextNote}
                   onChange={(e) => setUserContextNote(e.target.value)}
                   placeholder="E.g., I want to run a new idea by them and get feedback..."
-                  className="flex-1 px-3 py-2 border border-slate-300 rounded-lg text-sm resize-none focus:outline-none focus:ring-2 focus:ring-purple-500"
+                  className="flex-1 px-3 py-2 border border-slate-300 rounded-lg text-sm resize-none focus:outline-none focus:ring-2 focus:ring-orange-500"
                   rows={2}
                   disabled={isRecording || isTranscribing}
                 />
@@ -433,7 +353,7 @@ export function NewContactDetailScreen({ contactId, onBack, onEditContact, onAdd
                       ? 'bg-red-500 text-white animate-pulse'
                       : isTranscribing
                       ? 'bg-slate-300 text-slate-500'
-                      : 'bg-purple-500 text-white active:scale-95'
+                      : 'bg-orange-500 text-white active:scale-95'
                   } disabled:opacity-50`}
                   title={isRecording ? 'Stop recording' : isTranscribing ? 'Transcribing...' : 'Start voice recording'}
                 >
@@ -441,7 +361,7 @@ export function NewContactDetailScreen({ contactId, onBack, onEditContact, onAdd
                 </button>
               </div>
               {isTranscribing && (
-                <p className="text-xs text-purple-600 mt-1">Transcribing audio...</p>
+                <p className="text-xs text-orange-600 mt-1">Transcribing audio...</p>
               )}
             </div>
 
@@ -449,62 +369,147 @@ export function NewContactDetailScreen({ contactId, onBack, onEditContact, onAdd
               onClick={(e) => {
                 e.preventDefault();
                 e.stopPropagation();
-                generateAIStarters(false);
+                handleGenerateTalkingPoints(false);
               }}
-              disabled={generatingAI}
-              className="w-full bg-gradient-to-r from-purple-500 to-pink-500 text-white p-4 rounded-xl shadow-md active:scale-98 transition-transform disabled:opacity-50"
+              disabled={talkingPointsLoading}
+              className="w-full bg-gradient-to-r from-orange-500 to-pink-500 text-white p-4 rounded-xl shadow-md active:scale-98 transition-transform disabled:opacity-50"
             >
               <div className="flex items-center justify-center gap-2">
                 <Sparkles size={20} />
                 <span className="font-semibold">
-                  {generatingAI ? 'Generating...' : (aiMetadata.cached ? 'Refresh AI Starters' : 'AI Conversation Starters')}
+                  {talkingPointsLoading ? 'Generating...' : (talkingPointsResult?.cached ? 'Refresh Talking Points' : 'Suggested Talking Points')}
                 </span>
               </div>
             </button>
 
-            {aiMetadata.dailyLimit !== undefined && aiMetadata.dailyLimit !== null && (
+            {talkingPointsResult?.dailyLimit !== undefined && talkingPointsResult?.dailyLimit !== null && (
               <div className="mt-2 text-center text-xs text-slate-600">
-                {aiMetadata.dailyUsed}/{aiMetadata.dailyLimit} used today • {aiMetadata.monthlyUsed}/{aiMetadata.monthlyLimit} this month
+                {talkingPointsResult.dailyUsed}/{talkingPointsResult.dailyLimit} used today • {talkingPointsResult.monthlyUsed}/{talkingPointsResult.monthlyLimit} this month
               </div>
             )}
           </div>
 
-          {showAIStarters && (
-            <div className="bg-gradient-to-br from-purple-50 to-pink-50 rounded-2xl p-4 border border-purple-200 mb-4">
-              <div className="flex items-center justify-between mb-3">
-                <div className="flex items-center gap-2">
-                  <Sparkles size={18} className="text-purple-600" />
-                  <h3 className="font-semibold text-purple-900">Interaction Prep</h3>
-                </div>
-                {contextSource && (
-                  <div className="text-xs text-purple-600 bg-purple-100 px-2 py-1 rounded-full">
-                    {getContextSourceLabel(contextSource)}
+          {showTalkingPoints && (
+            <div className="mb-4">
+              {talkingPointsLoading && (
+                <div className="bg-gradient-to-br from-orange-50 to-pink-50 rounded-2xl p-6 border border-orange-200">
+                  <div className="flex items-center justify-center gap-3">
+                    <div className="w-5 h-5 border-2 border-orange-400 border-t-transparent rounded-full animate-spin" />
+                    <span className="text-sm text-orange-700 font-medium">Retrieving context and generating points...</span>
                   </div>
-                )}
-              </div>
-
-              {briefingSummary && (
-                <div className="mb-3 bg-white rounded-lg p-3 text-sm text-slate-700 border border-purple-100">
-                  <div className="font-semibold text-purple-900 mb-1 text-xs">Quick Recap</div>
-                  {briefingSummary}
                 </div>
               )}
 
-              <div className="mb-2 text-xs font-semibold text-purple-900">Conversation Starters</div>
-              <div className="space-y-2">
-                {aiStarters.map((starter, index) => (
-                  <button
-                    key={index}
-                    onClick={(e) => {
-                      e.preventDefault();
-                      e.stopPropagation();
-                    }}
-                    className="w-full bg-white rounded-lg p-3 text-sm text-slate-700 border border-purple-100 hover:border-purple-300 active:scale-98 transition-all text-left"
-                  >
-                    {starter}
-                  </button>
-                ))}
-              </div>
+              {!talkingPointsLoading && talkingPointsError && (
+                <div className="bg-red-50 rounded-2xl p-4 border border-red-200">
+                  <div className="flex items-center gap-2 text-red-700">
+                    <AlertTriangle size={18} />
+                    <span className="text-sm font-medium">{talkingPointsError}</span>
+                  </div>
+                </div>
+              )}
+
+              {!talkingPointsLoading && !talkingPointsError && talkingPointsResult?.empty_state && (
+                <div className="bg-slate-50 rounded-2xl p-6 border border-slate-200 text-center">
+                  <div className="w-12 h-12 mx-auto mb-3 bg-slate-200 rounded-full flex items-center justify-center">
+                    <Sparkles size={24} className="text-slate-400" />
+                  </div>
+                  <p className="text-sm text-slate-600 font-medium mb-1">Not enough data for personalized talking points</p>
+                  <p className="text-xs text-slate-500">{talkingPointsResult.message || 'Add LinkedIn or notes to personalize this.'}</p>
+                </div>
+              )}
+
+              {!talkingPointsLoading && !talkingPointsError && talkingPointsResult?.output && (
+                <div className="bg-gradient-to-br from-orange-50 to-pink-50 rounded-2xl p-4 border border-orange-200">
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center gap-2">
+                      <Sparkles size={18} className="text-orange-600" />
+                      <h3 className="font-semibold text-orange-900">Suggested Talking Points</h3>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <ConfidenceBadge confidence={talkingPointsResult.output.confidence} />
+                      <button
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          handleGenerateTalkingPoints(true);
+                        }}
+                        className="p-1.5 text-orange-600 hover:bg-orange-100 rounded-lg transition-colors"
+                        title="Refresh"
+                      >
+                        <RefreshCw size={14} />
+                      </button>
+                    </div>
+                  </div>
+
+                  {talkingPointsResult.source_summary && (
+                    <div className="flex flex-wrap gap-1.5 mb-3">
+                      {talkingPointsResult.source_summary.sources_used.map((source) => (
+                        <span key={source} className="px-2 py-0.5 bg-white border border-orange-200 text-orange-700 rounded-full text-xs font-medium">
+                          {source}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Personalized Opener */}
+                  <div className="bg-white rounded-lg p-3 border border-orange-100 mb-3">
+                    <div className="text-xs font-semibold text-orange-800 mb-1">Opening</div>
+                    <p className="text-sm text-slate-700">{talkingPointsResult.output.personalized_opener}</p>
+                  </div>
+
+                  {/* Talking Points */}
+                  <div className="mb-3">
+                    <div className="text-xs font-semibold text-orange-800 mb-2">Talking Points</div>
+                    <div className="space-y-2">
+                      {talkingPointsResult.output.talking_points.map((point, index) => (
+                        <div key={index} className="bg-white rounded-lg p-3 border border-orange-100">
+                          <p className="text-sm text-slate-700 mb-1.5">{point.text}</p>
+                          <div className="flex flex-wrap gap-1">
+                            {point.source_labels.map((label) => (
+                              <SourceChip key={label} label={label} />
+                            ))}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Follow-up Questions */}
+                  {talkingPointsResult.output.follow_up_questions.length > 0 && (
+                    <div className="mb-3">
+                      <div className="text-xs font-semibold text-orange-800 mb-2">Follow-up Questions</div>
+                      <div className="space-y-2">
+                        {talkingPointsResult.output.follow_up_questions.map((q, index) => (
+                          <div key={index} className="bg-white rounded-lg p-3 border border-orange-100">
+                            <p className="text-sm text-slate-700 mb-1.5">{q.text}</p>
+                            <div className="flex flex-wrap gap-1">
+                              {q.source_labels.map((label) => (
+                                <SourceChip key={label} label={label} />
+                              ))}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Watchouts */}
+                  {talkingPointsResult.output.watchouts.length > 0 && (
+                    <div>
+                      <div className="text-xs font-semibold text-amber-800 mb-2">Watchouts</div>
+                      <div className="space-y-1.5">
+                        {talkingPointsResult.output.watchouts.map((item, index) => (
+                          <div key={index} className="flex items-start gap-2 bg-amber-50 rounded-lg p-2.5 border border-amber-200">
+                            <AlertTriangle size={14} className="text-amber-600 mt-0.5 flex-shrink-0" />
+                            <p className="text-xs text-amber-800">{item}</p>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           )}
 

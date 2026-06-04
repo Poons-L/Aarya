@@ -17,6 +17,14 @@ export interface Contact {
   notes?: string;
   last_contact?: string;
   interaction_history?: any[];
+  enrichment_status?: string;
+  last_enriched_at?: string;
+  profile_summary?: string;
+  profile_keywords?: string[];
+  profile_headline?: string;
+  profile_region?: string;
+  profile_current_focus?: string;
+  enrichment_confidence?: number;
   created_at: string;
   updated_at: string;
   tags?: string[];
