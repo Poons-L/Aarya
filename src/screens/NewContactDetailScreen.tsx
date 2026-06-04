@@ -56,6 +56,13 @@ export function NewContactDetailScreen({ contactId, onBack, onEditContact, onAdd
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
 
+  // Trigger enrichment when contact has LinkedIn URL but hasn't been enriched
+  useEffect(() => {
+    if (contact && contact.linkedin_url && !contact.enrichment_status) {
+      enrichContact(contactId);
+    }
+  }, [contact?.linkedin_url, contact?.enrichment_status, contactId, enrichContact]);
+
   console.log('NewContactDetailScreen rendered with contactId:', contactId);
   console.log('Contacts array length:', contacts.length);
   console.log('Found contact:', contact);
@@ -158,13 +165,6 @@ export function NewContactDetailScreen({ contactId, onBack, onEditContact, onAdd
     setShowTalkingPoints(true);
     await generateTalkingPoints(contactId, userContextNote, forceRefresh);
   };
-
-  // Trigger enrichment when contact has LinkedIn URL but hasn't been enriched
-  useEffect(() => {
-    if (contact && contact.linkedin_url && !contact.enrichment_status) {
-      enrichContact(contactId);
-    }
-  }, [contact?.linkedin_url, contact?.enrichment_status, contactId, enrichContact]);
 
   const addInteractionNote = async () => {
     if (!newInteraction.trim()) return;
