@@ -31,6 +31,7 @@ export function FullAddContactScreen({ contactId, onBack, onSave }: FullAddConta
     met_at: '',
     met_date: new Date().toISOString().split('T')[0],
     notes: '',
+    birthday: '',
   });
 
   const [tags, setTags] = useState<string[]>([]);
@@ -50,6 +51,7 @@ export function FullAddContactScreen({ contactId, onBack, onSave }: FullAddConta
         met_at: contactToEdit.met_at || '',
         met_date: contactToEdit.met_date || new Date().toISOString().split('T')[0],
         notes: contactToEdit.notes || '',
+        birthday: contactToEdit.birthday || '',
       });
       setPhotoPreview(contactToEdit.photo_url || '');
       setTags((contactToEdit.tags && Array.isArray(contactToEdit.tags)) ? contactToEdit.tags : []);
@@ -405,6 +407,52 @@ export function FullAddContactScreen({ contactId, onBack, onSave }: FullAddConta
                 onChange={(e) => setFormData({ ...formData, met_date: e.target.value })}
                 className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-400 focus:border-transparent"
               />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-2">
+                Birthday (Month & Day)
+              </label>
+              <div className="flex gap-3">
+                <select
+                  value={formData.birthday ? formData.birthday.split('-')[0] : ''}
+                  onChange={(e) => {
+                    const month = e.target.value;
+                    const day = formData.birthday ? formData.birthday.split('-')[1] : '01';
+                    setFormData({ ...formData, birthday: month ? `${month}-${day}` : '' });
+                  }}
+                  className="flex-1 px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-400 focus:border-transparent"
+                >
+                  <option value="">Month</option>
+                  <option value="01">January</option>
+                  <option value="02">February</option>
+                  <option value="03">March</option>
+                  <option value="04">April</option>
+                  <option value="05">May</option>
+                  <option value="06">June</option>
+                  <option value="07">July</option>
+                  <option value="08">August</option>
+                  <option value="09">September</option>
+                  <option value="10">October</option>
+                  <option value="11">November</option>
+                  <option value="12">December</option>
+                </select>
+                <select
+                  value={formData.birthday ? formData.birthday.split('-')[1] : ''}
+                  onChange={(e) => {
+                    const day = e.target.value;
+                    const month = formData.birthday ? formData.birthday.split('-')[0] : '01';
+                    setFormData({ ...formData, birthday: day ? `${month}-${day}` : '' });
+                  }}
+                  className="flex-1 px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-400 focus:border-transparent"
+                >
+                  <option value="">Day</option>
+                  {Array.from({ length: 31 }, (_, i) => i + 1).map(d => (
+                    <option key={d} value={String(d).padStart(2, '0')}>{d}</option>
+                  ))}
+                </select>
+              </div>
+              <p className="text-xs text-slate-400 mt-1">Used as a reconnection signal for dormant contacts</p>
             </div>
           </div>
 

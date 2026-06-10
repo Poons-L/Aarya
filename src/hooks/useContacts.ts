@@ -17,6 +17,7 @@ export interface Contact {
   notes?: string;
   last_contact?: string;
   interaction_history?: any[];
+  birthday?: string;
   enrichment_status?: string;
   last_enriched_at?: string;
   profile_summary?: string;
@@ -99,6 +100,7 @@ export function useContacts() {
             met_at: contactData.met_at,
             met_date: contactData.met_date,
             notes: contactData.notes,
+            birthday: contactData.birthday || null,
             interaction_history: contactData.interaction_history || [],
           },
         ])
