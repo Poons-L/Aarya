@@ -192,6 +192,11 @@ function NewApp() {
         setHistory(prev => [...prev, navState]);
         setNavState({ screen: 'addReminder', contactId });
       }}
+      onQuickCapture={() => {
+        console.log('ContactDetail: onQuickCapture clicked');
+        setHistory(prev => [...prev, navState]);
+        setNavState({ screen: 'quickCapture', contactId: null });
+      }}
     />;
   } else if (navState.screen === 'addContact') {
     screenContent = <FullAddContactScreen

@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
-import { ArrowLeft, Mail, Phone, Linkedin, MapPin, Calendar, Tag, Pencil, MessageCircle, Sparkles, Plus, Clock, Send, ExternalLink, CalendarPlus, Download, User, ChevronDown, Mic, MicOff, AlertTriangle, RefreshCw } from 'lucide-react';
+import { ArrowLeft, Mail, Phone, Linkedin, MapPin, Calendar, Tag, Pencil, MessageCircle, Sparkles, Plus, Clock, Send, ExternalLink, CalendarPlus, Download, User, ChevronDown, Mic, MicOff, AlertTriangle, RefreshCw, Brain, Lightbulb } from 'lucide-react';
 import { useContacts } from '../hooks/useContacts';
+import { useReminders } from '../hooks/useReminders';
 import { useAuth } from '../contexts/AuthContext';
 import { useTalkingPoints } from '../hooks/useTalkingPoints';
 import { downloadVCard, generateHubSpotCSV, generateSalesforceCSV, downloadCSV, createMailtoLink, createCalendarEvent } from '../utils/contactExport';
@@ -10,6 +11,7 @@ interface NewContactDetailScreenProps {
   onBack: () => void;
   onEditContact: (contactId: string) => void;
   onAddReminder: (contactId: string) => void;
+  onQuickCapture?: () => void;
 }
 
 function SourceChip({ label }: { label: string }) {
@@ -41,34 +43,36 @@ function ConfidenceBadge({ confidence }: { confidence: 'low' | 'medium' | 'high'
   );
 }
 
-export function NewContactDetailScreen({ contactId, onBack, onEditContact, onAddReminder }: NewContactDetailScreenProps) {
+export function NewContactDetailScreen({ contactId, onBack, onEditContact, onAddReminder, onQuickCapture }: NewContactDetailScreenProps) {
   const { contacts, updateContact } = useContacts();
+  const { reminders } = useReminders();
   const { session } = useAuth();
-  const { loading: talkingPointsLoading, result: talkingPointsResult, error: talkingPointsError, generate: generateTalkingPoints, enrichContact, reset: resetTalkingPoints } = useTalkingPoints();
+  const { loading: talkingPointsLoading, result: talkingPointsResult, error: talkingPointsError, generate: generateTalkingPoints, enrichContact } = useTalkingPoints();
   const contact = contacts.find(c => c.id === contactId);
-  const [showTalkingPoints, setShowTalkingPoints] = useState(false);
   const [newInteraction, setNewInteraction] = useState('');
   const [showAddInteraction, setShowAddInteraction] = useState(false);
   const [showCRMExport, setShowCRMExport] = useState(false);
+  const [showAllDetails, setShowAllDetails] = useState(false);
   const [userContextNote, setUserContextNote] = useState('');
   const [isRecording, setIsRecording] = useState(false);
   const [isTranscribing, setIsTranscribing] = useState(false);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
 
-  // Trigger enrichment when contact has LinkedIn URL but hasn't been enriched
   useEffect(() => {
     if (contact && contact.linkedin_url && !contact.enrichment_status) {
       enrichContact(contactId);
     }
   }, [contact?.linkedin_url, contact?.enrichment_status, contactId, enrichContact]);
 
-  console.log('NewContactDetailScreen rendered with contactId:', contactId);
-  console.log('Contacts array length:', contacts.length);
-  console.log('Found contact:', contact);
+  // Auto-generate talking points on load
+  useEffect(() => {
+    if (contact && !talkingPointsResult && !talkingPointsLoading) {
+      generateTalkingPoints(contactId, '', false);
+    }
+  }, [contactId, contact]);
 
   if (!contact) {
-    console.log('Contact not found! Calling onBack()');
     return (
       <div className="h-full bg-gradient-to-br from-slate-50 to-slate-100 flex flex-col items-center justify-center">
         <div className="text-center">
@@ -89,6 +93,14 @@ export function NewContactDetailScreen({ contactId, onBack, onEditContact, onAdd
   }
 
   const interactionHistory = contact.interaction_history || [];
+  const lastInteraction = Array.isArray(interactionHistory) && interactionHistory.length > 0
+    ? interactionHistory[interactionHistory.length - 1]
+    : null;
+
+  // Upcoming reminders for this contact
+  const contactReminders = reminders
+    .filter(r => r.contact_id === contactId && !r.completed)
+    .sort((a, b) => new Date(a.due_date).getTime() - new Date(b.due_date).getTime());
 
   const startRecording = async () => {
     try {
@@ -162,7 +174,6 @@ export function NewContactDetailScreen({ contactId, onBack, onEditContact, onAdd
   };
 
   const handleGenerateTalkingPoints = async (forceRefresh = false) => {
-    setShowTalkingPoints(true);
     await generateTalkingPoints(contactId, userContextNote, forceRefresh);
   };
 
@@ -205,6 +216,17 @@ export function NewContactDetailScreen({ contactId, onBack, onEditContact, onAdd
     });
   };
 
+  const formatRelative = (dateString: string) => {
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffDays = Math.floor((now.getTime() - date.getTime()) / (1000 * 60 * 60 * 24));
+    if (diffDays === 0) return 'Today';
+    if (diffDays === 1) return 'Yesterday';
+    if (diffDays < 7) return `${diffDays} days ago`;
+    if (diffDays < 30) return `${Math.floor(diffDays / 7)} weeks ago`;
+    return formatDate(dateString);
+  };
+
   const handleSendEmail = () => {
     if (!contact.email) return;
     const mailto = createMailtoLink(contact.email, `Following up`, `Hi ${contact.name.split(' ')[0]},\n\n`);
@@ -239,544 +261,486 @@ export function NewContactDetailScreen({ contactId, onBack, onEditContact, onAdd
 
   return (
     <div className="h-full bg-gradient-to-br from-slate-50 to-slate-100 flex flex-col">
-      <div className="bg-white border-b border-slate-200 px-6 py-4 flex items-center justify-between">
+      {/* Header */}
+      <div className="bg-white border-b border-slate-200 px-5 py-3 flex items-center justify-between">
         <button
           onClick={(e) => {
             e.preventDefault();
             e.stopPropagation();
             onBack();
           }}
-          className="text-slate-600 active:text-slate-900"
+          className="p-1 text-slate-600 active:text-slate-900"
         >
-          <ArrowLeft size={24} />
+          <ArrowLeft size={22} />
         </button>
-        <h1 className="text-lg font-semibold text-slate-900">Contact Details</h1>
-        <button
-          onClick={(e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            onEditContact(contactId);
-          }}
-          className="text-orange-600 active:text-orange-800"
-        >
-          <Pencil size={20} />
-        </button>
-      </div>
-
-      <div className="flex-1 overflow-y-auto">
-        <div className="px-6 py-8">
-          <div className="flex flex-col items-center mb-6">
-            <div className="w-28 h-28 rounded-full bg-gradient-to-br from-orange-400 to-pink-500 flex items-center justify-center text-white text-4xl font-semibold overflow-hidden mb-4">
-              {contact.photo_url ? (
-                <img
-                  src={contact.photo_url}
-                  alt={contact.name}
-                  className="w-full h-full object-cover"
-                />
-              ) : (
-                contact.name[0]
-              )}
-            </div>
-            <h2 className="text-2xl font-bold text-slate-900 text-center">
-              {contact.name}
-            </h2>
+        <div className="flex items-center gap-3">
+          <div className="w-8 h-8 rounded-full bg-gradient-to-br from-orange-400 to-pink-500 flex items-center justify-center text-white text-sm font-semibold overflow-hidden">
+            {contact.photo_url ? (
+              <img src={contact.photo_url} alt={contact.name} className="w-full h-full object-cover" />
+            ) : (
+              contact.name[0]
+            )}
+          </div>
+          <div>
+            <h1 className="text-base font-semibold text-slate-900 leading-tight">{contact.name}</h1>
             {(contact.title || contact.company) && (
-              <p className="text-slate-600 text-center mt-1">
+              <p className="text-xs text-slate-500">
                 {contact.title && contact.company
                   ? `${contact.title} at ${contact.company}`
                   : contact.company || contact.title}
               </p>
             )}
           </div>
+        </div>
+        <button
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            onEditContact(contactId);
+          }}
+          className="p-1 text-orange-600 active:text-orange-800"
+        >
+          <Pencil size={18} />
+        </button>
+      </div>
 
-          {(contact.email || contact.phone || contact.linkedin_url) && (
-            <div className="bg-white rounded-2xl p-4 shadow-sm border border-slate-200 mb-4 space-y-3">
-              {contact.email && (
-                <a
-                  href={`mailto:${contact.email}`}
-                  className="flex items-center gap-3 text-slate-700 active:text-orange-600"
-                >
-                  <Mail size={20} className="text-orange-500" />
-                  <span className="text-sm">{contact.email}</span>
-                </a>
-              )}
-              {contact.phone && (
-                <a
-                  href={`tel:${contact.phone}`}
-                  className="flex items-center gap-3 text-slate-700 active:text-orange-600"
-                >
-                  <Phone size={20} className="text-orange-500" />
-                  <span className="text-sm">{contact.phone}</span>
-                </a>
-              )}
-              {contact.linkedin_url && (
-                <a
-                  href={contact.linkedin_url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center gap-3 text-slate-700 active:text-orange-600"
-                >
-                  <Linkedin size={20} className="text-orange-500" />
-                  <span className="text-sm">LinkedIn Profile</span>
-                </a>
+      <div className="flex-1 overflow-y-auto pb-24">
+        <div className="px-5 py-4">
+
+          {/* SECTION 1: Remember This */}
+          <div className="bg-white rounded-2xl p-4 shadow-sm border border-slate-200 mb-4">
+            <div className="flex items-center gap-2 mb-3">
+              <Brain size={18} className="text-orange-500" />
+              <h3 className="text-sm font-semibold text-slate-800">Remember This</h3>
+            </div>
+
+            {/* Key notes */}
+            {contact.notes && (
+              <div className="mb-3">
+                <div className="text-xs font-medium text-slate-500 mb-1">Key Notes</div>
+                <p className="text-sm text-slate-700 leading-relaxed">{contact.notes}</p>
+              </div>
+            )}
+
+            {/* Last conversation */}
+            {lastInteraction && (
+              <div className="mb-3">
+                <div className="text-xs font-medium text-slate-500 mb-1">Last Conversation</div>
+                <div className="bg-slate-50 rounded-lg p-2.5 border border-slate-100">
+                  <p className="text-sm text-slate-700">{lastInteraction.note}</p>
+                  <p className="text-xs text-slate-400 mt-1">{formatRelative(lastInteraction.date)}</p>
+                </div>
+              </div>
+            )}
+
+            {/* What matters to them - from enrichment or profile keywords */}
+            {(contact.profile_current_focus || contact.profile_keywords?.length) && (
+              <div>
+                <div className="text-xs font-medium text-slate-500 mb-1">What Matters to Them</div>
+                {contact.profile_current_focus && (
+                  <p className="text-sm text-slate-700 mb-1.5">{contact.profile_current_focus}</p>
+                )}
+                {contact.profile_keywords && contact.profile_keywords.length > 0 && (
+                  <div className="flex flex-wrap gap-1.5">
+                    {contact.profile_keywords.slice(0, 5).map((kw) => (
+                      <span key={kw} className="px-2 py-0.5 bg-orange-50 text-orange-700 rounded-full text-xs border border-orange-100">
+                        {kw}
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Upcoming reminder for this contact */}
+            {contactReminders.length > 0 && (
+              <div className="mt-3 pt-3 border-t border-slate-100">
+                <div className="flex items-center gap-1.5 text-xs font-medium text-orange-600">
+                  <Calendar size={12} />
+                  <span>Next: {contactReminders[0].title}</span>
+                  <span className="text-slate-400 ml-1">
+                    ({formatDate(contactReminders[0].due_date)})
+                  </span>
+                </div>
+              </div>
+            )}
+
+            {/* Empty state */}
+            {!contact.notes && !lastInteraction && !contact.profile_current_focus && !contact.profile_keywords?.length && (
+              <p className="text-sm text-slate-400 text-center py-3">
+                Add notes or log interactions to build context
+              </p>
+            )}
+          </div>
+
+          {/* SECTION 2: Say This Next - AI Talking Points */}
+          <div className="bg-gradient-to-br from-orange-50 to-pink-50 rounded-2xl p-4 border border-orange-100 mb-4">
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-2">
+                <Lightbulb size={18} className="text-orange-500" />
+                <h3 className="text-sm font-semibold text-slate-800">Say This Next</h3>
+              </div>
+              {talkingPointsResult?.output && (
+                <div className="flex items-center gap-1.5">
+                  <ConfidenceBadge confidence={talkingPointsResult.output.confidence} />
+                  <button
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      handleGenerateTalkingPoints(true);
+                    }}
+                    className="p-1 text-orange-600 hover:bg-orange-100 rounded-lg transition-colors"
+                    title="Refresh"
+                  >
+                    <RefreshCw size={13} />
+                  </button>
+                </div>
               )}
             </div>
-          )}
 
-          <div className="mb-4">
-            <div className="bg-white rounded-2xl p-4 shadow-sm border border-slate-200 mb-4">
-              <label className="block text-sm font-semibold text-slate-700 mb-2">
-                Add context for this interaction (optional)
-              </label>
+            {/* Context input */}
+            <div className="mb-3">
               <div className="flex gap-2">
-                <textarea
+                <input
                   value={userContextNote}
                   onChange={(e) => setUserContextNote(e.target.value)}
-                  placeholder="E.g., I want to run a new idea by them and get feedback..."
-                  className="flex-1 px-3 py-2 border border-slate-300 rounded-lg text-sm resize-none focus:outline-none focus:ring-2 focus:ring-orange-500"
-                  rows={2}
+                  placeholder="Add context (e.g., discussing partnership)"
+                  className="flex-1 px-3 py-2 bg-white border border-orange-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-orange-400"
                   disabled={isRecording || isTranscribing}
                 />
                 <button
                   onClick={(e) => {
                     e.preventDefault();
                     e.stopPropagation();
-                    if (isRecording) {
-                      stopRecording();
-                    } else {
-                      startRecording();
-                    }
+                    if (isRecording) stopRecording();
+                    else startRecording();
                   }}
                   disabled={isTranscribing}
-                  className={`p-3 rounded-lg transition-all ${
+                  className={`p-2 rounded-lg transition-all ${
                     isRecording
                       ? 'bg-red-500 text-white animate-pulse'
                       : isTranscribing
                       ? 'bg-slate-300 text-slate-500'
                       : 'bg-orange-500 text-white active:scale-95'
                   } disabled:opacity-50`}
-                  title={isRecording ? 'Stop recording' : isTranscribing ? 'Transcribing...' : 'Start voice recording'}
                 >
-                  {isRecording ? <MicOff size={20} /> : <Mic size={20} />}
+                  {isRecording ? <MicOff size={18} /> : <Mic size={18} />}
                 </button>
               </div>
               {isTranscribing && (
-                <p className="text-xs text-orange-600 mt-1">Transcribing audio...</p>
+                <p className="text-xs text-orange-600 mt-1">Transcribing...</p>
+              )}
+              <button
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  handleGenerateTalkingPoints(!!userContextNote);
+                }}
+                disabled={talkingPointsLoading}
+                className="mt-2 w-full bg-gradient-to-r from-orange-500 to-pink-500 text-white py-2.5 rounded-lg text-sm font-medium active:scale-[0.98] transition-transform disabled:opacity-50"
+              >
+                {talkingPointsLoading ? 'Generating...' : (userContextNote ? 'Generate with Context' : 'Refresh Suggestions')}
+              </button>
+              {talkingPointsResult?.dailyLimit !== undefined && talkingPointsResult?.dailyLimit !== null && (
+                <div className="mt-1.5 text-center text-[10px] text-slate-500">
+                  {talkingPointsResult.dailyUsed}/{talkingPointsResult.dailyLimit} today
+                </div>
               )}
             </div>
 
-            <button
-              onClick={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                handleGenerateTalkingPoints(false);
-              }}
-              disabled={talkingPointsLoading}
-              className="w-full bg-gradient-to-r from-orange-500 to-pink-500 text-white p-4 rounded-xl shadow-md active:scale-98 transition-transform disabled:opacity-50"
-            >
-              <div className="flex items-center justify-center gap-2">
-                <Sparkles size={20} />
-                <span className="font-semibold">
-                  {talkingPointsLoading ? 'Generating...' : (talkingPointsResult?.cached ? 'Refresh Talking Points' : 'Suggested Talking Points')}
-                </span>
-              </div>
-            </button>
-
-            {talkingPointsResult?.dailyLimit !== undefined && talkingPointsResult?.dailyLimit !== null && (
-              <div className="mt-2 text-center text-xs text-slate-600">
-                {talkingPointsResult.dailyUsed}/{talkingPointsResult.dailyLimit} used today • {talkingPointsResult.monthlyUsed}/{talkingPointsResult.monthlyLimit} this month
+            {/* Loading state */}
+            {talkingPointsLoading && (
+              <div className="flex items-center justify-center gap-2 py-4">
+                <div className="w-4 h-4 border-2 border-orange-400 border-t-transparent rounded-full animate-spin" />
+                <span className="text-sm text-orange-700">Preparing suggestions...</span>
               </div>
             )}
-          </div>
 
-          {showTalkingPoints && (
-            <div className="mb-4">
-              {talkingPointsLoading && (
-                <div className="bg-gradient-to-br from-orange-50 to-pink-50 rounded-2xl p-6 border border-orange-200">
-                  <div className="flex items-center justify-center gap-3">
-                    <div className="w-5 h-5 border-2 border-orange-400 border-t-transparent rounded-full animate-spin" />
-                    <span className="text-sm text-orange-700 font-medium">Retrieving context and generating points...</span>
-                  </div>
+            {/* Error state */}
+            {!talkingPointsLoading && talkingPointsError && (
+              <div className="flex items-center gap-2 text-red-700 bg-red-50 rounded-lg p-3 border border-red-200">
+                <AlertTriangle size={16} />
+                <span className="text-sm">{talkingPointsError}</span>
+              </div>
+            )}
+
+            {/* Empty state */}
+            {!talkingPointsLoading && !talkingPointsError && talkingPointsResult?.empty_state && (
+              <div className="text-center py-3">
+                <p className="text-sm text-slate-500">{talkingPointsResult.message || 'Add notes or LinkedIn to get personalized points'}</p>
+              </div>
+            )}
+
+            {/* Talking Points Result */}
+            {!talkingPointsLoading && !talkingPointsError && talkingPointsResult?.output && (
+              <div className="space-y-2.5">
+                {/* Opener */}
+                <div className="bg-white rounded-lg p-3 border border-orange-100">
+                  <div className="text-[10px] font-semibold text-orange-700 uppercase tracking-wide mb-1">Opener</div>
+                  <p className="text-sm text-slate-800">{talkingPointsResult.output.personalized_opener}</p>
                 </div>
-              )}
 
-              {!talkingPointsLoading && talkingPointsError && (
-                <div className="bg-red-50 rounded-2xl p-4 border border-red-200">
-                  <div className="flex items-center gap-2 text-red-700">
-                    <AlertTriangle size={18} />
-                    <span className="text-sm font-medium">{talkingPointsError}</span>
-                  </div>
-                </div>
-              )}
-
-              {!talkingPointsLoading && !talkingPointsError && talkingPointsResult?.empty_state && (
-                <div className="bg-slate-50 rounded-2xl p-6 border border-slate-200 text-center">
-                  <div className="w-12 h-12 mx-auto mb-3 bg-slate-200 rounded-full flex items-center justify-center">
-                    <Sparkles size={24} className="text-slate-400" />
-                  </div>
-                  <p className="text-sm text-slate-600 font-medium mb-1">Not enough data for personalized talking points</p>
-                  <p className="text-xs text-slate-500">{talkingPointsResult.message || 'Add LinkedIn or notes to personalize this.'}</p>
-                </div>
-              )}
-
-              {!talkingPointsLoading && !talkingPointsError && talkingPointsResult?.output && (
-                <div className="bg-gradient-to-br from-orange-50 to-pink-50 rounded-2xl p-4 border border-orange-200">
-                  <div className="flex items-center justify-between mb-3">
-                    <div className="flex items-center gap-2">
-                      <Sparkles size={18} className="text-orange-600" />
-                      <h3 className="font-semibold text-orange-900">Suggested Talking Points</h3>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <ConfidenceBadge confidence={talkingPointsResult.output.confidence} />
-                      <button
-                        onClick={(e) => {
-                          e.preventDefault();
-                          e.stopPropagation();
-                          handleGenerateTalkingPoints(true);
-                        }}
-                        className="p-1.5 text-orange-600 hover:bg-orange-100 rounded-lg transition-colors"
-                        title="Refresh"
-                      >
-                        <RefreshCw size={14} />
-                      </button>
-                    </div>
-                  </div>
-
-                  {talkingPointsResult.source_summary && (
-                    <div className="flex flex-wrap gap-1.5 mb-3">
-                      {talkingPointsResult.source_summary.sources_used.map((source) => (
-                        <span key={source} className="px-2 py-0.5 bg-white border border-orange-200 text-orange-700 rounded-full text-xs font-medium">
-                          {source}
-                        </span>
-                      ))}
-                    </div>
-                  )}
-
-                  {/* Personalized Opener */}
-                  <div className="bg-white rounded-lg p-3 border border-orange-100 mb-3">
-                    <div className="text-xs font-semibold text-orange-800 mb-1">Opening</div>
-                    <p className="text-sm text-slate-700">{talkingPointsResult.output.personalized_opener}</p>
-                  </div>
-
-                  {/* Talking Points */}
-                  <div className="mb-3">
-                    <div className="text-xs font-semibold text-orange-800 mb-2">Talking Points</div>
-                    <div className="space-y-2">
-                      {talkingPointsResult.output.talking_points.map((point, index) => (
-                        <div key={index} className="bg-white rounded-lg p-3 border border-orange-100">
-                          <p className="text-sm text-slate-700 mb-1.5">{point.text}</p>
-                          <div className="flex flex-wrap gap-1">
-                            {point.source_labels.map((label) => (
-                              <SourceChip key={label} label={label} />
-                            ))}
-                          </div>
-                        </div>
+                {/* Points */}
+                {talkingPointsResult.output.talking_points.map((point, index) => (
+                  <div key={index} className="bg-white rounded-lg p-3 border border-orange-100">
+                    <p className="text-sm text-slate-700">{point.text}</p>
+                    <div className="flex flex-wrap gap-1 mt-1.5">
+                      {point.source_labels.map((label) => (
+                        <SourceChip key={label} label={label} />
                       ))}
                     </div>
                   </div>
+                ))}
 
-                  {/* Follow-up Questions */}
-                  {talkingPointsResult.output.follow_up_questions.length > 0 && (
-                    <div className="mb-3">
-                      <div className="text-xs font-semibold text-orange-800 mb-2">Follow-up Questions</div>
-                      <div className="space-y-2">
-                        {talkingPointsResult.output.follow_up_questions.map((q, index) => (
-                          <div key={index} className="bg-white rounded-lg p-3 border border-orange-100">
-                            <p className="text-sm text-slate-700 mb-1.5">{q.text}</p>
-                            <div className="flex flex-wrap gap-1">
-                              {q.source_labels.map((label) => (
-                                <SourceChip key={label} label={label} />
-                              ))}
-                            </div>
-                          </div>
-                        ))}
+                {/* Follow-ups */}
+                {talkingPointsResult.output.follow_up_questions.length > 0 && (
+                  <div>
+                    <div className="text-[10px] font-semibold text-orange-700 uppercase tracking-wide mb-1.5">Ask</div>
+                    {talkingPointsResult.output.follow_up_questions.map((q, index) => (
+                      <div key={index} className="bg-white rounded-lg p-2.5 border border-orange-100 mb-1.5">
+                        <p className="text-sm text-slate-700">{q.text}</p>
                       </div>
-                    </div>
-                  )}
-
-                  {/* Watchouts */}
-                  {talkingPointsResult.output.watchouts.length > 0 && (
-                    <div>
-                      <div className="text-xs font-semibold text-amber-800 mb-2">Watchouts</div>
-                      <div className="space-y-1.5">
-                        {talkingPointsResult.output.watchouts.map((item, index) => (
-                          <div key={index} className="flex items-start gap-2 bg-amber-50 rounded-lg p-2.5 border border-amber-200">
-                            <AlertTriangle size={14} className="text-amber-600 mt-0.5 flex-shrink-0" />
-                            <p className="text-xs text-amber-800">{item}</p>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
-          )}
-
-          <div className="bg-white rounded-2xl p-4 shadow-sm border border-slate-200 mb-4">
-            <h3 className="text-sm font-semibold text-slate-700 mb-3">Quick Actions</h3>
-            <div className="space-y-2">
-              <button
-                onClick={(e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  handleSendEmail();
-                }}
-                disabled={!contact.email}
-                className={`w-full flex items-center gap-3 p-3 rounded-xl transition-all ${
-                  contact.email
-                    ? 'bg-gradient-to-r from-blue-500 to-blue-600 text-white active:scale-98'
-                    : 'bg-slate-100 text-slate-400 cursor-not-allowed'
-                }`}
-              >
-                <Send size={20} />
-                <div className="text-left flex-1">
-                  <div className="font-semibold text-sm">Send Email</div>
-                  <div className="text-xs opacity-90">
-                    {contact.email || 'No email address'}
+                    ))}
                   </div>
-                </div>
-              </button>
+                )}
 
-              <button
-                onClick={(e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  handleViewLinkedIn();
-                }}
-                disabled={!contact.linkedin_url}
-                className={`w-full flex items-center gap-3 p-3 rounded-xl transition-all ${
-                  contact.linkedin_url
-                    ? 'bg-gradient-to-r from-blue-600 to-blue-700 text-white active:scale-98'
-                    : 'bg-slate-100 text-slate-400 cursor-not-allowed'
-                }`}
-              >
-                <ExternalLink size={20} />
-                <div className="text-left flex-1">
-                  <div className="font-semibold text-sm">View LinkedIn</div>
-                  <div className="text-xs opacity-90">
-                    {contact.linkedin_url ? 'Open profile' : 'No LinkedIn saved'}
-                  </div>
-                </div>
-              </button>
-
-              <button
-                onClick={(e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  handleScheduleMeeting();
-                }}
-                className="w-full flex items-center gap-3 p-3 rounded-xl bg-gradient-to-r from-green-500 to-emerald-600 text-white active:scale-98 transition-all"
-              >
-                <CalendarPlus size={20} />
-                <div className="text-left flex-1">
-                  <div className="font-semibold text-sm">Schedule Meeting</div>
-                  <div className="text-xs opacity-90">Create calendar invite</div>
-                </div>
-              </button>
-
-              <div className="relative">
-                <button
-                  onClick={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    setShowCRMExport(!showCRMExport);
-                  }}
-                  className="w-full flex items-center gap-3 p-3 rounded-xl bg-gradient-to-r from-purple-500 to-purple-600 text-white active:scale-98 transition-all"
-                >
-                  <Download size={20} />
-                  <div className="text-left flex-1">
-                    <div className="font-semibold text-sm">Export to CRM</div>
-                    <div className="text-xs opacity-90">HubSpot or Salesforce</div>
-                  </div>
-                  <ChevronDown size={20} className={`transition-transform ${showCRMExport ? 'rotate-180' : ''}`} />
-                </button>
-
-                {showCRMExport && (
-                  <div className="mt-2 space-y-2 pl-4">
-                    <button
-                      onClick={(e) => {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        handleExportHubSpot();
-                      }}
-                      className="w-full flex items-center gap-3 p-3 rounded-xl bg-orange-50 border border-orange-200 text-orange-700 active:scale-98 transition-all"
-                    >
-                      <Download size={18} />
-                      <div className="text-left flex-1">
-                        <div className="font-semibold text-sm">Export to HubSpot</div>
-                        <div className="text-xs">Download CSV for HubSpot import</div>
+                {/* Watchouts */}
+                {talkingPointsResult.output.watchouts.length > 0 && (
+                  <div className="space-y-1.5">
+                    {talkingPointsResult.output.watchouts.map((item, index) => (
+                      <div key={index} className="flex items-start gap-2 bg-amber-50 rounded-lg p-2.5 border border-amber-200">
+                        <AlertTriangle size={13} className="text-amber-600 mt-0.5 flex-shrink-0" />
+                        <p className="text-xs text-amber-800">{item}</p>
                       </div>
-                    </button>
-
-                    <button
-                      onClick={(e) => {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        handleExportSalesforce();
-                      }}
-                      className="w-full flex items-center gap-3 p-3 rounded-xl bg-blue-50 border border-blue-200 text-blue-700 active:scale-98 transition-all"
-                    >
-                      <Download size={18} />
-                      <div className="text-left flex-1">
-                        <div className="font-semibold text-sm">Export to Salesforce</div>
-                        <div className="text-xs">Download CSV for Salesforce import</div>
-                      </div>
-                    </button>
+                    ))}
                   </div>
                 )}
               </div>
-
-              <button
-                onClick={(e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  handleSaveAsContact();
-                }}
-                className="w-full flex items-center gap-3 p-3 rounded-xl bg-gradient-to-r from-amber-500 to-orange-600 text-white active:scale-98 transition-all"
-              >
-                <User size={20} />
-                <div className="text-left flex-1">
-                  <div className="font-semibold text-sm">Save as Contact</div>
-                  <div className="text-xs opacity-90">Download vCard (.vcf)</div>
-                </div>
-              </button>
-            </div>
-          </div>
-
-          {(contact.met_at || contact.met_date) && (
-            <div className="bg-white rounded-2xl p-4 shadow-sm border border-slate-200 mb-4 space-y-3">
-              {contact.met_at && (
-                <div className="flex items-center gap-3">
-                  <MapPin size={20} className="text-orange-500" />
-                  <div>
-                    <div className="text-xs text-slate-500">Where we met</div>
-                    <div className="text-sm text-slate-900 font-medium capitalize">
-                      {contact.met_at}
-                    </div>
-                  </div>
-                </div>
-              )}
-              {contact.met_date && (
-                <div className="flex items-center gap-3">
-                  <Calendar size={20} className="text-orange-500" />
-                  <div>
-                    <div className="text-xs text-slate-500">Date met</div>
-                    <div className="text-sm text-slate-900 font-medium">
-                      {formatDate(contact.met_date)}
-                    </div>
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
-
-          {contact.tags && Array.isArray(contact.tags) && contact.tags.length > 0 && (
-            <div className="bg-white rounded-2xl p-4 shadow-sm border border-slate-200 mb-4">
-              <div className="flex items-center gap-2 mb-3">
-                <Tag size={18} className="text-orange-500" />
-                <h3 className="text-sm font-semibold text-slate-700">Tags</h3>
-              </div>
-              <div className="flex flex-wrap gap-2">
-                {contact.tags.map(tag => (
-                  <span
-                    key={tag}
-                    className="px-3 py-1 bg-orange-100 text-orange-700 rounded-full text-sm"
-                  >
-                    {tag}
-                  </span>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {contact.notes && (
-            <div className="bg-white rounded-2xl p-4 shadow-sm border border-slate-200 mb-4">
-              <div className="flex items-center gap-2 mb-3">
-                <MessageCircle size={18} className="text-orange-500" />
-                <h3 className="text-sm font-semibold text-slate-700">Notes</h3>
-              </div>
-              <p className="text-sm text-slate-700 whitespace-pre-wrap">{contact.notes}</p>
-            </div>
-          )}
-
-          <div className="bg-white rounded-2xl p-4 shadow-sm border border-slate-200 mb-4">
-            <div className="flex items-center justify-between mb-3">
-              <div className="flex items-center gap-2">
-                <Clock size={18} className="text-orange-500" />
-                <h3 className="text-sm font-semibold text-slate-700">Interaction History</h3>
-              </div>
-              <button
-                onClick={(e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  setShowAddInteraction(!showAddInteraction);
-                }}
-                className="text-orange-600 active:text-orange-800"
-              >
-                <Plus size={20} />
-              </button>
-            </div>
-
-            {showAddInteraction && (
-              <div className="mb-3 space-y-2">
-                <textarea
-                  value={newInteraction}
-                  onChange={(e) => setNewInteraction(e.target.value)}
-                  placeholder="Add a note about your interaction..."
-                  rows={3}
-                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-orange-400"
-                />
-                <button
-                  onClick={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    addInteractionNote();
-                  }}
-                  disabled={!newInteraction.trim()}
-                  className="w-full bg-orange-500 text-white py-2 rounded-lg text-sm font-medium disabled:opacity-50 active:scale-98 transition-transform"
-                >
-                  Add Note
-                </button>
-              </div>
-            )}
-
-            {Array.isArray(interactionHistory) && interactionHistory.length > 0 ? (
-              <div className="space-y-2">
-                {[...interactionHistory].reverse().map((interaction: any, index) => (
-                  <div
-                    key={index}
-                    className="bg-slate-50 rounded-lg p-3 border border-slate-200"
-                  >
-                    <div className="text-xs text-slate-500 mb-1">
-                      {formatDateTime(interaction.date)}
-                    </div>
-                    <div className="text-sm text-slate-700">{interaction.note}</div>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <p className="text-sm text-slate-500 text-center py-4">
-                No interactions recorded yet
-              </p>
             )}
           </div>
 
+          {/* SECTION 3: Contact Info */}
+          {(contact.email || contact.phone || contact.linkedin_url) && (
+            <div className="bg-white rounded-2xl p-4 shadow-sm border border-slate-200 mb-4">
+              <h3 className="text-sm font-semibold text-slate-700 mb-3">Contact Info</h3>
+              <div className="space-y-2.5">
+                {contact.email && (
+                  <a href={`mailto:${contact.email}`} className="flex items-center gap-3 text-slate-700">
+                    <Mail size={18} className="text-orange-500" />
+                    <span className="text-sm">{contact.email}</span>
+                  </a>
+                )}
+                {contact.phone && (
+                  <a href={`tel:${contact.phone}`} className="flex items-center gap-3 text-slate-700">
+                    <Phone size={18} className="text-orange-500" />
+                    <span className="text-sm">{contact.phone}</span>
+                  </a>
+                )}
+                {contact.linkedin_url && (
+                  <a href={contact.linkedin_url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 text-slate-700">
+                    <Linkedin size={18} className="text-orange-500" />
+                    <span className="text-sm">LinkedIn Profile</span>
+                  </a>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Quick Actions Row */}
+          <div className="flex gap-2 mb-4">
+            <button
+              onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleSendEmail(); }}
+              disabled={!contact.email}
+              className="flex-1 flex flex-col items-center gap-1 py-3 bg-white rounded-xl border border-slate-200 shadow-sm disabled:opacity-40"
+            >
+              <Send size={18} className="text-blue-500" />
+              <span className="text-[10px] font-medium text-slate-600">Email</span>
+            </button>
+            <button
+              onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleViewLinkedIn(); }}
+              disabled={!contact.linkedin_url}
+              className="flex-1 flex flex-col items-center gap-1 py-3 bg-white rounded-xl border border-slate-200 shadow-sm disabled:opacity-40"
+            >
+              <ExternalLink size={18} className="text-sky-500" />
+              <span className="text-[10px] font-medium text-slate-600">LinkedIn</span>
+            </button>
+            <button
+              onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleScheduleMeeting(); }}
+              className="flex-1 flex flex-col items-center gap-1 py-3 bg-white rounded-xl border border-slate-200 shadow-sm"
+            >
+              <CalendarPlus size={18} className="text-green-500" />
+              <span className="text-[10px] font-medium text-slate-600">Meet</span>
+            </button>
+            <button
+              onClick={(e) => { e.preventDefault(); e.stopPropagation(); onAddReminder(contactId); }}
+              className="flex-1 flex flex-col items-center gap-1 py-3 bg-white rounded-xl border border-slate-200 shadow-sm"
+            >
+              <Clock size={18} className="text-orange-500" />
+              <span className="text-[10px] font-medium text-slate-600">Remind</span>
+            </button>
+          </div>
+
+          {/* Expandable Details */}
+          <button
+            onClick={(e) => { e.preventDefault(); e.stopPropagation(); setShowAllDetails(!showAllDetails); }}
+            className="w-full flex items-center justify-between bg-white rounded-xl p-3 shadow-sm border border-slate-200 mb-4"
+          >
+            <span className="text-sm font-medium text-slate-700">More Details & History</span>
+            <ChevronDown size={18} className={`text-slate-400 transition-transform ${showAllDetails ? 'rotate-180' : ''}`} />
+          </button>
+
+          {showAllDetails && (
+            <>
+              {/* Where/when met */}
+              {(contact.met_at || contact.met_date) && (
+                <div className="bg-white rounded-2xl p-4 shadow-sm border border-slate-200 mb-4 space-y-2.5">
+                  {contact.met_at && (
+                    <div className="flex items-center gap-3">
+                      <MapPin size={18} className="text-orange-500" />
+                      <div>
+                        <div className="text-xs text-slate-500">Where we met</div>
+                        <div className="text-sm text-slate-900 font-medium capitalize">{contact.met_at}</div>
+                      </div>
+                    </div>
+                  )}
+                  {contact.met_date && (
+                    <div className="flex items-center gap-3">
+                      <Calendar size={18} className="text-orange-500" />
+                      <div>
+                        <div className="text-xs text-slate-500">Date met</div>
+                        <div className="text-sm text-slate-900 font-medium">{formatDate(contact.met_date)}</div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Tags */}
+              {contact.tags && Array.isArray(contact.tags) && contact.tags.length > 0 && (
+                <div className="bg-white rounded-2xl p-4 shadow-sm border border-slate-200 mb-4">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Tag size={16} className="text-orange-500" />
+                    <h3 className="text-sm font-semibold text-slate-700">Tags</h3>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    {contact.tags.map(tag => (
+                      <span key={tag} className="px-3 py-1 bg-orange-100 text-orange-700 rounded-full text-sm">{tag}</span>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Interaction History */}
+              <div className="bg-white rounded-2xl p-4 shadow-sm border border-slate-200 mb-4">
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-2">
+                    <Clock size={16} className="text-orange-500" />
+                    <h3 className="text-sm font-semibold text-slate-700">Interaction History</h3>
+                  </div>
+                  <button
+                    onClick={(e) => { e.preventDefault(); e.stopPropagation(); setShowAddInteraction(!showAddInteraction); }}
+                    className="text-orange-600 active:text-orange-800"
+                  >
+                    <Plus size={18} />
+                  </button>
+                </div>
+
+                {showAddInteraction && (
+                  <div className="mb-3 space-y-2">
+                    <textarea
+                      value={newInteraction}
+                      onChange={(e) => setNewInteraction(e.target.value)}
+                      placeholder="Add a note about your interaction..."
+                      rows={3}
+                      className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-orange-400"
+                    />
+                    <button
+                      onClick={(e) => { e.preventDefault(); e.stopPropagation(); addInteractionNote(); }}
+                      disabled={!newInteraction.trim()}
+                      className="w-full bg-orange-500 text-white py-2 rounded-lg text-sm font-medium disabled:opacity-50 active:scale-[0.98] transition-transform"
+                    >
+                      Add Note
+                    </button>
+                  </div>
+                )}
+
+                {Array.isArray(interactionHistory) && interactionHistory.length > 0 ? (
+                  <div className="space-y-2">
+                    {[...interactionHistory].reverse().map((interaction: any, index) => (
+                      <div key={index} className="bg-slate-50 rounded-lg p-3 border border-slate-100">
+                        <div className="text-xs text-slate-500 mb-1">{formatDateTime(interaction.date)}</div>
+                        <div className="text-sm text-slate-700">{interaction.note}</div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-sm text-slate-400 text-center py-3">No interactions recorded yet</p>
+                )}
+              </div>
+
+              {/* CRM Export & Save */}
+              <div className="bg-white rounded-2xl p-4 shadow-sm border border-slate-200 mb-4">
+                <h3 className="text-sm font-semibold text-slate-700 mb-3">Export</h3>
+                <div className="space-y-2">
+                  <div className="relative">
+                    <button
+                      onClick={(e) => { e.preventDefault(); e.stopPropagation(); setShowCRMExport(!showCRMExport); }}
+                      className="w-full flex items-center gap-3 p-3 rounded-xl bg-slate-50 border border-slate-200 active:scale-[0.98] transition-all"
+                    >
+                      <Download size={18} className="text-slate-600" />
+                      <span className="text-sm font-medium text-slate-700">Export to CRM</span>
+                      <ChevronDown size={16} className={`ml-auto text-slate-400 transition-transform ${showCRMExport ? 'rotate-180' : ''}`} />
+                    </button>
+
+                    {showCRMExport && (
+                      <div className="mt-2 space-y-2 pl-4">
+                        <button
+                          onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleExportHubSpot(); }}
+                          className="w-full flex items-center gap-3 p-2.5 rounded-lg bg-orange-50 border border-orange-200 text-orange-700 text-sm active:scale-[0.98]"
+                        >
+                          <Download size={16} />
+                          <span>HubSpot CSV</span>
+                        </button>
+                        <button
+                          onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleExportSalesforce(); }}
+                          className="w-full flex items-center gap-3 p-2.5 rounded-lg bg-blue-50 border border-blue-200 text-blue-700 text-sm active:scale-[0.98]"
+                        >
+                          <Download size={16} />
+                          <span>Salesforce CSV</span>
+                        </button>
+                      </div>
+                    )}
+                  </div>
+
+                  <button
+                    onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleSaveAsContact(); }}
+                    className="w-full flex items-center gap-3 p-3 rounded-xl bg-slate-50 border border-slate-200 active:scale-[0.98] transition-all"
+                  >
+                    <User size={18} className="text-slate-600" />
+                    <span className="text-sm font-medium text-slate-700">Download vCard</span>
+                  </button>
+                </div>
+              </div>
+            </>
+          )}
+        </div>
+      </div>
+
+      {/* Floating Action Button - Quick Capture */}
+      {onQuickCapture && (
+        <div className="absolute bottom-6 right-5 z-10">
           <button
             onClick={(e) => {
               e.preventDefault();
               e.stopPropagation();
-              onAddReminder(contactId);
+              onQuickCapture();
             }}
-            className="w-full bg-gradient-to-r from-amber-500 to-orange-500 text-white p-4 rounded-xl shadow-md active:scale-98 transition-transform"
+            className="w-14 h-14 bg-gradient-to-br from-orange-500 to-pink-500 rounded-full shadow-lg shadow-orange-500/30 flex items-center justify-center active:scale-90 transition-transform"
           >
-            <div className="flex items-center justify-center gap-2">
-              <Calendar size={20} />
-              <span className="font-semibold">Set Follow-up Reminder</span>
-            </div>
+            <Plus size={28} className="text-white" />
           </button>
         </div>
-      </div>
+      )}
     </div>
   );
 }
