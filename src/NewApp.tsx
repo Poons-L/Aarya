@@ -12,6 +12,7 @@ import { NewRemindersScreen } from './screens/NewRemindersScreen';
 import { NewAddReminderScreen } from './screens/NewAddReminderScreen';
 import { NewProfileScreen } from './screens/NewProfileScreen';
 import OwnerAdminDashboard from './screens/OwnerAdminDashboard';
+import { FeedbackScreen } from './screens/FeedbackScreen';
 import { BottomTabNav } from './components/BottomTabNav';
 import { useAuth } from './contexts/AuthContext';
 import { useReminders } from './hooks/useReminders';
@@ -19,7 +20,7 @@ import { useReminders } from './hooks/useReminders';
 type Tab = 'home' | 'contacts' | 'reminders' | 'profile';
 
 interface NavState {
-  screen: 'welcome' | 'onboarding' | 'auth' | 'resetPassword' | 'home' | 'contacts' | 'contactDetail' | 'addContact' | 'editContact' | 'quickCapture' | 'reminders' | 'addReminder' | 'profile' | 'admin';
+  screen: 'welcome' | 'onboarding' | 'auth' | 'resetPassword' | 'home' | 'contacts' | 'contactDetail' | 'addContact' | 'editContact' | 'quickCapture' | 'reminders' | 'addReminder' | 'profile' | 'admin' | 'feedback';
   contactId?: string | null;
 }
 
@@ -302,6 +303,9 @@ function NewApp() {
         } else if (screen === 'admin') {
           setHistory(prev => [...prev, navState]);
           setNavState({ screen: 'admin', contactId: null });
+        } else if (screen === 'feedback') {
+          setHistory(prev => [...prev, navState]);
+          setNavState({ screen: 'feedback', contactId: null });
         }
       }}
     />;
@@ -309,6 +313,19 @@ function NewApp() {
     screenContent = <OwnerAdminDashboard
       onBack={() => {
         console.log('Admin: onBack clicked');
+        if (history.length === 0) {
+          setNavState({ screen: 'profile', contactId: null });
+        } else {
+          const newHistory = [...history];
+          const previousState = newHistory.pop()!;
+          setHistory(newHistory);
+          setNavState(previousState);
+        }
+      }}
+    />;
+  } else if (navState.screen === 'feedback') {
+    screenContent = <FeedbackScreen
+      onBack={() => {
         if (history.length === 0) {
           setNavState({ screen: 'profile', contactId: null });
         } else {

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { User, Mail, Camera, LogOut, Info, Bell, Shield, ChevronRight, Lock } from 'lucide-react';
+import { User, Mail, Camera, LogOut, Info, Bell, Shield, ChevronRight, Lock, MessageSquare } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 
 const OWNER_EMAIL = 'poonam@uplifyt.com';
@@ -158,6 +158,17 @@ export function NewProfileScreen({ onNavigate }: NewProfileScreenProps) {
             <div className="flex items-center gap-3">
               <Info size={20} className="text-slate-600" />
               <span className="text-slate-900 font-medium">About</span>
+            </div>
+            <ChevronRight size={20} className="text-slate-400" />
+          </button>
+
+          <button
+            onClick={() => onNavigate('feedback')}
+            className="w-full flex items-center justify-between p-4 border-t border-slate-200 active:bg-slate-50 transition-colors"
+          >
+            <div className="flex items-center gap-3">
+              <MessageSquare size={20} className="text-slate-600" />
+              <span className="text-slate-900 font-medium">Send Feedback</span>
             </div>
             <ChevronRight size={20} className="text-slate-400" />
           </button>

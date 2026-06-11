@@ -54,11 +54,40 @@ Deno.serve(async (req: Request) => {
 
     const serviceClient = createClient(supabaseUrl, supabaseServiceKey);
 
+    // Check if feedback tab is requested
+    const url = new URL(req.url);
+    const tab = url.searchParams.get("tab");
+
+    if (tab === "feedback") {
+      const { data: feedbackData } = await serviceClient
+        .from("feedback")
+        .select("*")
+        .order("created_at", { ascending: false })
+        .limit(100);
+
+      // Get user emails for feedback entries
+      const { data: allUsers } = await serviceClient.auth.admin.listUsers();
+      const emailMap: Record<string, string> = {};
+      allUsers?.users.forEach((u) => {
+        if (u.email) emailMap[u.id] = u.email;
+      });
+
+      const feedbackWithEmails = (feedbackData || []).map((f) => ({
+        ...f,
+        user_email: emailMap[f.user_id] || null,
+      }));
+
+      return new Response(JSON.stringify({ feedback: feedbackWithEmails }), {
+        status: 200,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // Default: overview stats
     const now = new Date();
     const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
     const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
 
-    // Fetch all users
     const { data: allUsers, error: usersError } = await serviceClient.auth.admin.listUsers();
     if (usersError) {
       throw new Error(`Failed to fetch users: ${usersError.message}`);
@@ -67,7 +96,6 @@ Deno.serve(async (req: Request) => {
     const users = allUsers.users;
     const totalUsers = users.length;
 
-    // Sign-up method breakdown
     const googleUsers = users.filter(u => {
       const providers = u.app_metadata?.providers || [];
       const provider = u.app_metadata?.provider;
@@ -79,7 +107,6 @@ Deno.serve(async (req: Request) => {
       return !providers.includes('google') && provider !== 'google';
     });
 
-    // Activity metrics
     const activeUsers = users.filter(
       u => u.last_sign_in_at && new Date(u.last_sign_in_at) > sevenDaysAgo
     ).length;
@@ -87,12 +114,10 @@ Deno.serve(async (req: Request) => {
       u => !u.last_sign_in_at || new Date(u.last_sign_in_at) < thirtyDaysAgo
     ).length;
 
-    // Total contacts
     const { count: totalContacts } = await serviceClient
       .from("contacts")
       .select("*", { count: "exact", head: true });
 
-    // Contacts per user
     const { data: userContactCounts } = await serviceClient
       .from("contacts")
       .select("user_id");
@@ -102,7 +127,6 @@ Deno.serve(async (req: Request) => {
       contactCountByUser[c.user_id] = (contactCountByUser[c.user_id] || 0) + 1;
     });
 
-    // Interactions per user (count interaction_history entries per user)
     const { data: contactsWithHistory } = await serviceClient
       .from("contacts")
       .select("user_id, interaction_history");
@@ -115,7 +139,6 @@ Deno.serve(async (req: Request) => {
       totalInteractions += count;
     });
 
-    // Build per-user data
     const usersWithStats = users.map((u) => {
       const providers = u.app_metadata?.providers || [];
       const provider = u.app_metadata?.provider;
