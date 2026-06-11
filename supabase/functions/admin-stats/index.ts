@@ -7,14 +7,11 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "Content-Type, Authorization, X-Client-Info, Apikey",
 };
 
-const OWNER_EMAIL = "Chicchori@gmail.com";
+const OWNER_EMAIL = "poonam@uplifyt.com";
 
 Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") {
-    return new Response(null, {
-      status: 200,
-      headers: corsHeaders,
-    });
+    return new Response(null, { status: 200, headers: corsHeaders });
   }
 
   try {
@@ -29,81 +26,73 @@ Deno.serve(async (req: Request) => {
     if (!authHeader) {
       return new Response(
         JSON.stringify({ error: "Missing authorization header" }),
-        {
-          status: 401,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        }
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
     const anonClient = createClient(
       supabaseUrl,
       Deno.env.get("SUPABASE_ANON_KEY") || "",
-      {
-        global: {
-          headers: { Authorization: authHeader },
-        },
-      }
+      { global: { headers: { Authorization: authHeader } } }
     );
 
-    const {
-      data: { user },
-      error: userError,
-    } = await anonClient.auth.getUser();
+    const { data: { user }, error: userError } = await anonClient.auth.getUser();
 
     if (userError || !user) {
       return new Response(
         JSON.stringify({ error: "Unauthorized" }),
-        {
-          status: 401,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        }
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
     if (user.email !== OWNER_EMAIL) {
       return new Response(
         JSON.stringify({ error: "Forbidden: Admin access required" }),
-        {
-          status: 403,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        }
+        { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
     const serviceClient = createClient(supabaseUrl, supabaseServiceKey);
 
     const now = new Date();
-    const oneWeekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+    const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
     const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
 
+    // Fetch all users
     const { data: allUsers, error: usersError } = await serviceClient.auth.admin.listUsers();
-
     if (usersError) {
       throw new Error(`Failed to fetch users: ${usersError.message}`);
     }
 
-    const totalUsers = allUsers.users.length;
-    const newUsersThisWeek = allUsers.users.filter(
-      (u) => new Date(u.created_at) > oneWeekAgo
+    const users = allUsers.users;
+    const totalUsers = users.length;
+
+    // Sign-up method breakdown
+    const googleUsers = users.filter(u => {
+      const providers = u.app_metadata?.providers || [];
+      const provider = u.app_metadata?.provider;
+      return providers.includes('google') || provider === 'google';
+    });
+    const emailUsers = users.filter(u => {
+      const providers = u.app_metadata?.providers || [];
+      const provider = u.app_metadata?.provider;
+      return !providers.includes('google') && provider !== 'google';
+    });
+
+    // Activity metrics
+    const activeUsers = users.filter(
+      u => u.last_sign_in_at && new Date(u.last_sign_in_at) > sevenDaysAgo
     ).length;
-    const activeUsers = allUsers.users.filter(
-      (u) => u.last_sign_in_at && new Date(u.last_sign_in_at) > oneWeekAgo
+    const inactiveUsers = users.filter(
+      u => !u.last_sign_in_at || new Date(u.last_sign_in_at) < thirtyDaysAgo
     ).length;
 
+    // Total contacts
     const { count: totalContacts } = await serviceClient
       .from("contacts")
       .select("*", { count: "exact", head: true });
 
-    const { count: newContactsThisWeek } = await serviceClient
-      .from("contacts")
-      .select("*", { count: "exact", head: true })
-      .gte("created_at", oneWeekAgo.toISOString());
-
-    const { count: totalAIUsage } = await serviceClient
-      .from("ai_usage_logs")
-      .select("*", { count: "exact", head: true });
-
+    // Contacts per user
     const { data: userContactCounts } = await serviceClient
       .from("contacts")
       .select("user_id");
@@ -113,102 +102,60 @@ Deno.serve(async (req: Request) => {
       contactCountByUser[c.user_id] = (contactCountByUser[c.user_id] || 0) + 1;
     });
 
-    const usersWithStats = allUsers.users.map((u) => ({
-      id: u.id,
-      email: u.email,
-      created_at: u.created_at,
-      last_sign_in_at: u.last_sign_in_at,
-      contact_count: contactCountByUser[u.id] || 0,
-    }));
+    // Interactions per user (count interaction_history entries per user)
+    const { data: contactsWithHistory } = await serviceClient
+      .from("contacts")
+      .select("user_id, interaction_history");
 
-    const { data: dailySignups } = await serviceClient.rpc(
-      "get_daily_signups",
-      { days: 30 }
-    ).then((result) => {
-      if (result.error) {
-        const dailyCounts: Record<string, number> = {};
-        allUsers.users.forEach((u) => {
-          const date = new Date(u.created_at).toISOString().split("T")[0];
-          if (new Date(u.created_at) > thirtyDaysAgo) {
-            dailyCounts[date] = (dailyCounts[date] || 0) + 1;
-          }
-        });
-        return { data: Object.entries(dailyCounts).map(([date, count]) => ({ date, count })) };
-      }
-      return result;
+    const interactionCountByUser: Record<string, number> = {};
+    let totalInteractions = 0;
+    contactsWithHistory?.forEach((c) => {
+      const count = Array.isArray(c.interaction_history) ? c.interaction_history.length : 0;
+      interactionCountByUser[c.user_id] = (interactionCountByUser[c.user_id] || 0) + count;
+      totalInteractions += count;
     });
 
-    const { data: contactsData } = await serviceClient
-      .from("contacts")
-      .select("created_at")
-      .gte("created_at", thirtyDaysAgo.toISOString())
-      .order("created_at", { ascending: true });
+    // Build per-user data
+    const usersWithStats = users.map((u) => {
+      const providers = u.app_metadata?.providers || [];
+      const provider = u.app_metadata?.provider;
+      const isGoogle = providers.includes('google') || provider === 'google';
 
-    const dailyContactCounts: Record<string, number> = {};
-    contactsData?.forEach((c) => {
-      const date = new Date(c.created_at).toISOString().split("T")[0];
-      dailyContactCounts[date] = (dailyContactCounts[date] || 0) + 1;
+      return {
+        id: u.id,
+        email: u.email || '',
+        signup_method: isGoogle ? 'Google' : 'Email',
+        created_at: u.created_at,
+        last_sign_in_at: u.last_sign_in_at,
+        contact_count: contactCountByUser[u.id] || 0,
+        interaction_count: interactionCountByUser[u.id] || 0,
+      };
     });
-
-    const contactsOverTime = Object.entries(dailyContactCounts).map(([date, count]) => ({
-      date,
-      count,
-    }));
-
-    const { data: recentContacts } = await serviceClient
-      .from("contacts")
-      .select("id, name, email, company, created_at, user_id")
-      .order("created_at", { ascending: false })
-      .limit(10);
 
     const stats = {
-      metrics: {
+      summary: {
         totalUsers,
         totalContacts: totalContacts || 0,
-        totalAIUsage: totalAIUsage || 0,
-        newUsersThisWeek,
-        newContactsThisWeek: newContactsThisWeek || 0,
+        totalInteractions,
         activeUsers,
+        inactiveUsers,
+      },
+      sourceBreakdown: {
+        google: { count: googleUsers.length, percentage: totalUsers > 0 ? Math.round((googleUsers.length / totalUsers) * 100) : 0 },
+        email: { count: emailUsers.length, percentage: totalUsers > 0 ? Math.round((emailUsers.length / totalUsers) * 100) : 0 },
       },
       users: usersWithStats,
-      charts: {
-        signupsOverTime: dailySignups || [],
-        contactsOverTime,
-      },
-      recentActivity: {
-        recentContacts: recentContacts || [],
-        recentSignups: allUsers.users
-          .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
-          .slice(0, 10)
-          .map((u) => ({
-            id: u.id,
-            email: u.email,
-            created_at: u.created_at,
-          })),
-      },
     };
 
     return new Response(JSON.stringify(stats), {
       status: 200,
-      headers: {
-        ...corsHeaders,
-        "Content-Type": "application/json",
-      },
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (error) {
     console.error("Error fetching admin stats:", error);
-
     return new Response(
-      JSON.stringify({
-        error: error.message || "Failed to fetch admin statistics",
-      }),
-      {
-        status: 500,
-        headers: {
-          ...corsHeaders,
-          "Content-Type": "application/json",
-        },
-      }
+      JSON.stringify({ error: error.message || "Failed to fetch admin statistics" }),
+      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }
 });
