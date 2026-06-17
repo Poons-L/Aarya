@@ -59,7 +59,8 @@ export default function OwnerAdminDashboard({ onBack }: OwnerAdminDashboardProps
   const [feedbackLoading, setFeedbackLoading] = useState(false);
 
   useEffect(() => {
-    if (!user || user.email !== OWNER_EMAIL) {
+    if (!user) return;
+    if (user.email?.toLowerCase() !== OWNER_EMAIL.toLowerCase()) {
       if (onBack) onBack();
       return;
     }
@@ -182,7 +183,7 @@ export default function OwnerAdminDashboard({ onBack }: OwnerAdminDashboardProps
     return acc;
   }, {});
 
-  if (!user || user.email !== OWNER_EMAIL) return null;
+  if (!user || user.email?.toLowerCase() !== OWNER_EMAIL.toLowerCase()) return null;
 
   if (loading) {
     return (

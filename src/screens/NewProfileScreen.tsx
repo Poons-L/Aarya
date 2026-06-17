@@ -173,7 +173,7 @@ export function NewProfileScreen({ onNavigate }: NewProfileScreenProps) {
             <ChevronRight size={20} className="text-slate-400" />
           </button>
 
-          {user?.email === OWNER_EMAIL && (
+          {user?.email?.toLowerCase() === OWNER_EMAIL.toLowerCase() && (
             <button
               onClick={() => onNavigate('admin')}
               className="w-full flex items-center justify-between p-4 border-t border-slate-200 active:bg-slate-50 transition-colors bg-gradient-to-r from-orange-50 to-pink-50"
