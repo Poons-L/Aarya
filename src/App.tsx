@@ -15,9 +15,11 @@ import { SettingsScreen } from './screens/SettingsScreen';
 import { MemoryDetailScreen } from './screens/MemoryDetailScreen';
 import { EditMemoryScreen } from './screens/EditMemoryScreen';
 import { EventsAgendaScreen } from './screens/EventsAgendaScreen';
+import { ResetPasswordScreen } from './screens/ResetPasswordScreen';
 import AdminDashboardScreen from './screens/AdminDashboardScreen';
 import { useAuth } from './contexts/AuthContext';
 import { useContacts } from './hooks/useContacts';
+import { supabase } from './lib/supabase';
 import { useReminders } from './hooks/useReminders';
 import { useMemories } from './hooks/useMemories';
 
@@ -38,7 +40,8 @@ type Screen =
   | 'add-reminder'
   | 'settings'
   | 'events-agenda'
-  | 'admin';
+  | 'admin'
+  | 'reset-password';
 
 function App() {
   const { user, loading: authLoading } = useAuth();
@@ -51,6 +54,7 @@ function App() {
 
   useEffect(() => {
     if (!authLoading) {
+      if (currentScreen === 'reset-password') return;
       if (user) {
         setCurrentScreen('home');
       } else {
@@ -58,6 +62,15 @@ function App() {
       }
     }
   }, [user, authLoading]);
+
+  useEffect(() => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
+      if (event === 'PASSWORD_RECOVERY') {
+        setCurrentScreen('reset-password');
+      }
+    });
+    return () => subscription.unsubscribe();
+  }, []);
 
   if (authLoading) {
     return (
@@ -312,6 +325,13 @@ function App() {
           <AdminDashboardScreen
             onBack={() => navigate('home')}
             onHome={() => navigate('home')}
+          />
+        );
+
+      case 'reset-password':
+        return (
+          <ResetPasswordScreen
+            onComplete={() => navigate('auth')}
           />
         );
 
