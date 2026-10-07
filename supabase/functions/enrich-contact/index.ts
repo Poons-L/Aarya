@@ -1,5 +1,6 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "npm:@supabase/supabase-js@2.57.4";
+import { enforceDailyLimit, logUsage, requireUser } from "../_shared/guard.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -50,6 +51,13 @@ Deno.serve(async (req: Request) => {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
+
+    // Per-user daily cap on AI spend (counted per attempt)
+    const guardCtx = await requireUser(req);
+    if (guardCtx instanceof Response) return guardCtx;
+    const limited = await enforceDailyLimit(req, guardCtx, "enrich_contact", 20);
+    if (limited) return limited;
+    await logUsage(guardCtx, "enrich_contact");
 
     const { contact_id } = await req.json();
 
@@ -230,7 +238,7 @@ If data is too sparse for a field, set it to null. The confidence score reflects
     console.error("Error enriching contact:", error);
     return new Response(
       JSON.stringify({
-        error: error.message || "Failed to enrich contact",
+        error: "Failed to enrich contact",
       }),
       {
         status: 500,

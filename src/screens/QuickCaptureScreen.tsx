@@ -1,7 +1,7 @@
 import { useState, useRef } from 'react';
 import { ArrowLeft, Camera, Mic, StopCircle } from 'lucide-react';
 import { useContacts } from '../hooks/useContacts';
-import { supabase } from '../lib/supabase';
+import { transcribeAudio as transcribeRecording } from '../lib/transcribe';
 
 interface QuickCaptureScreenProps {
   onBack: () => void;
@@ -76,31 +76,17 @@ export function QuickCaptureScreen({ onBack, onComplete }: QuickCaptureScreenPro
     }
 
     try {
-      const reader = new FileReader();
-      reader.readAsDataURL(audioBlob);
-      reader.onloadend = async () => {
-        const base64Audio = reader.result?.toString().split(',')[1];
-        if (!base64Audio) {
-          throw new Error('Failed to convert audio');
+      const transcript = await transcribeRecording(audioBlob);
+      if (transcript) {
+        if (forName) {
+          setName(transcript);
+        } else {
+          setNote(prev => prev ? `${prev}\n\n${transcript}` : transcript);
         }
-
-        const { data, error } = await supabase.functions.invoke('transcribe-audio', {
-          body: { audioData: base64Audio, language: 'en' }
-        });
-
-        if (error) throw error;
-
-        if (data?.transcript) {
-          if (forName) {
-            setName(data.transcript.trim());
-          } else {
-            setNote(prev => prev ? `${prev}\n\n${data.transcript}` : data.transcript);
-          }
-        }
-      };
+      }
     } catch (error) {
       console.error('Error transcribing audio:', error);
-      alert('Failed to transcribe audio. Please try typing instead.');
+      alert(error instanceof Error ? error.message : 'Failed to transcribe audio. Please try typing instead.');
     } finally {
       if (forName) {
         setTranscribingName(false);

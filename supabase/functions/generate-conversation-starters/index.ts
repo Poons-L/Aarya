@@ -549,7 +549,7 @@ Requirements:
 
     return new Response(
       JSON.stringify({
-        error: error.message || "Failed to generate conversation starters",
+        error: "Failed to generate conversation starters",
         starters: [
           "How have you been since we last connected?",
           "I'd love to catch up and hear what you've been working on.",

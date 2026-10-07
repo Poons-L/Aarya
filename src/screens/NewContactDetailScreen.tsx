@@ -4,7 +4,8 @@ import { useContacts } from '../hooks/useContacts';
 import { useReminders } from '../hooks/useReminders';
 import { useAuth } from '../contexts/AuthContext';
 import { useTalkingPoints } from '../hooks/useTalkingPoints';
-import { downloadVCard, generateHubSpotCSV, generateSalesforceCSV, downloadCSV, createMailtoLink, createCalendarEvent } from '../utils/contactExport';
+import { transcribeAudio as transcribeRecording } from '../lib/transcribe';
+import { downloadVCard, generateHubSpotCSV, generateSalesforceCSV, downloadCSV, createMailtoLink, createCalendarEvent, safeHttpUrl } from '../utils/contactExport';
 
 interface NewContactDetailScreenProps {
   contactId: string;
@@ -145,30 +146,13 @@ export function NewContactDetailScreen({ contactId, onBack, onEditContact, onAdd
         return;
       }
 
-      const formData = new FormData();
-      formData.append('file', audioBlob, 'recording.webm');
-
-      const apiUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/transcribe-audio`;
-      const response = await fetch(apiUrl, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${session.access_token}`,
-        },
-        body: formData
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        if (data.text) {
-          setUserContextNote(prev => prev ? `${prev} ${data.text}` : data.text);
-        }
-      } else {
-        console.error('Transcription failed:', await response.text());
-        alert('Transcription failed. Please try again.');
+      const transcript = await transcribeRecording(audioBlob);
+      if (transcript) {
+        setUserContextNote(prev => prev ? `${prev} ${transcript}` : transcript);
       }
     } catch (error) {
       console.error('Error transcribing audio:', error);
-      alert('Error transcribing audio. Please try again.');
+      alert(error instanceof Error ? error.message : 'Error transcribing audio. Please try again.');
     } finally {
       setIsTranscribing(false);
     }
@@ -240,13 +224,14 @@ export function NewContactDetailScreen({ contactId, onBack, onEditContact, onAdd
   };
 
   const handleViewLinkedIn = () => {
-    if (!contact.linkedin_url) return;
-    window.open(contact.linkedin_url, '_blank');
+    const url = safeHttpUrl(contact.linkedin_url);
+    if (!url) return;
+    window.open(url, '_blank', 'noopener,noreferrer');
   };
 
   const handleScheduleMeeting = () => {
     const calendarUrl = createCalendarEvent(contact.name, contact.email);
-    window.open(calendarUrl, '_blank');
+    window.open(calendarUrl, '_blank', 'noopener,noreferrer');
   };
 
   const handleExportHubSpot = () => {
@@ -551,19 +536,19 @@ export function NewContactDetailScreen({ contactId, onBack, onEditContact, onAdd
               <h3 className="text-sm font-semibold text-slate-700 mb-3">Contact Info</h3>
               <div className="space-y-2.5">
                 {contact.email && (
-                  <a href={`mailto:${contact.email}`} className="flex items-center gap-3 text-slate-700">
+                  <a href={createMailtoLink(contact.email)} className="flex items-center gap-3 text-slate-700">
                     <Mail size={18} className="text-orange-500" />
                     <span className="text-sm">{contact.email}</span>
                   </a>
                 )}
                 {contact.phone && (
-                  <a href={`tel:${contact.phone}`} className="flex items-center gap-3 text-slate-700">
+                  <a href={`tel:${contact.phone.replace(/[^0-9+*#,;]/g, "")}`} className="flex items-center gap-3 text-slate-700">
                     <Phone size={18} className="text-orange-500" />
                     <span className="text-sm">{contact.phone}</span>
                   </a>
                 )}
-                {contact.linkedin_url && (
-                  <a href={contact.linkedin_url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 text-slate-700">
+                {safeHttpUrl(contact.linkedin_url) && (
+                  <a href={safeHttpUrl(contact.linkedin_url)!} target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 text-slate-700">
                     <Linkedin size={18} className="text-orange-500" />
                     <span className="text-sm">LinkedIn Profile</span>
                   </a>
@@ -584,7 +569,7 @@ export function NewContactDetailScreen({ contactId, onBack, onEditContact, onAdd
             </button>
             <button
               onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleViewLinkedIn(); }}
-              disabled={!contact.linkedin_url}
+              disabled={!safeHttpUrl(contact.linkedin_url)}
               className="flex-1 flex flex-col items-center gap-1 py-3 bg-white rounded-xl border border-slate-200 shadow-sm disabled:opacity-40"
             >
               <ExternalLink size={18} className="text-sky-500" />

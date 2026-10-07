@@ -177,7 +177,7 @@ Deno.serve(async (req: Request) => {
   } catch (error) {
     console.error("Error fetching admin stats:", error);
     return new Response(
-      JSON.stringify({ error: error.message || "Failed to fetch admin statistics" }),
+      JSON.stringify({ error: "Failed to fetch admin statistics" }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }

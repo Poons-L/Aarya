@@ -40,7 +40,6 @@ export function FullAddContactScreen({ contactId, onBack, onSave }: FullAddConta
   // Pre-populate form when editing and contact data is available
   useEffect(() => {
     if (isEdit && contactToEdit) {
-      console.log('Pre-populating form with contact data:', contactToEdit);
       setFormData({
         name: contactToEdit.name || '',
         company: contactToEdit.company || '',
@@ -99,7 +98,6 @@ export function FullAddContactScreen({ contactId, onBack, onSave }: FullAddConta
 
       const apiUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/smart-paste`;
 
-      console.log('Calling smart-paste function with URL:', apiUrl);
 
       const response = await fetch(apiUrl, {
         method: 'POST',
@@ -110,16 +108,14 @@ export function FullAddContactScreen({ contactId, onBack, onSave }: FullAddConta
         body: JSON.stringify({ text: pastedText }),
       });
 
-      console.log('Smart-paste response status:', response.status);
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
         console.error('Smart-paste error:', errorData);
-        throw new Error(errorData.error || 'Failed to parse text');
+        throw new Error(errorData.message || errorData.error || 'Failed to parse text');
       }
 
       const result = await response.json();
-      console.log('Smart-paste result:', result);
 
       if (result.success && result.data) {
         const data = result.data;

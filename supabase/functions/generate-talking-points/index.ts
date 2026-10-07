@@ -581,7 +581,7 @@ Remember: Use ONLY facts from the context above. Do not speculate or invent deta
     return new Response(
       JSON.stringify({
         error:
-          error.message || "Failed to generate talking points",
+          "Failed to generate talking points",
       }),
       {
         status: 500,

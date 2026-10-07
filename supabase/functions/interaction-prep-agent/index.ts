@@ -1,10 +1,13 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "npm:@supabase/supabase-js@2.57.4";
+import { enforceDailyLimit, logUsage, requireUser } from "../_shared/guard.ts";
 import {
   getContact,
   getRecentInteractions,
   getNotes,
   generateConversationStarters,
+  type Contact,
+  type Interaction,
 } from "../_shared/agent-toolkit.ts";
 
 const corsHeaders = {
@@ -74,6 +77,13 @@ Deno.serve(async (req: Request) => {
         }
       );
     }
+
+    // Per-user daily cap on AI spend (counted per attempt)
+    const guardCtx = await requireUser(req);
+    if (guardCtx instanceof Response) return guardCtx;
+    const limited = await enforceDailyLimit(req, guardCtx, "interaction_prep", 20);
+    if (limited) return limited;
+    await logUsage(guardCtx, "interaction_prep");
 
     const requestData: InteractionPrepRequest = await req.json();
 
@@ -190,7 +200,7 @@ Deno.serve(async (req: Request) => {
 
     return new Response(
       JSON.stringify({
-        error: error.message || "Failed to prepare interaction briefing",
+        error: "Failed to prepare interaction briefing",
       }),
       {
         status: 500,
@@ -204,8 +214,8 @@ Deno.serve(async (req: Request) => {
 });
 
 function generateBriefingSummary(
-  contact: any,
-  interactions: any[],
+  contact: Contact,
+  interactions: Interaction[],
   notes: string | null,
   contextSource: string,
   contextType: string

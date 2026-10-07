@@ -46,7 +46,7 @@ export async function getContact(contactId: string, userId?: string): Promise<Co
     query.eq("user_id", userId);
   }
 
-  const { data, error, count } = await query.maybeSingle();
+  const { data, error } = await query.maybeSingle();
 
   if (error) {
     console.error("❌ [Toolkit] Error fetching contact:", {

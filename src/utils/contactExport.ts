@@ -1,42 +1,83 @@
 import { Contact } from '../hooks/useContacts';
 
+/**
+ * Returns an http(s) URL safe to use as a link target, or null.
+ * Rejects javascript:, data: and other schemes; adds https:// to bare hosts like "linkedin.com/in/x".
+ */
+export function safeHttpUrl(value?: string | null): string | null {
+  const trimmed = value?.trim();
+  if (!trimmed) return null;
+  const candidate = /^[a-z][a-z0-9+.-]*:/i.test(trimmed) ? trimmed : `https://${trimmed}`;
+  try {
+    const url = new URL(candidate);
+    return url.protocol === 'https:' || url.protocol === 'http:' ? url.href : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Quotes a CSV field and neutralises spreadsheet formulas: a cell starting with
+ * = + - @ (or tab/CR) would otherwise be executed by Excel/Sheets when opened.
+ */
+export function escapeCsvValue(value: string): string {
+  const neutralised = /^[=+\-@\t\r]/.test(value) ? `'${value}` : value;
+  if (/[",\n\r]/.test(neutralised) || neutralised !== value) {
+    return `"${neutralised.replace(/"/g, '""')}"`;
+  }
+  return neutralised;
+}
+
+/** Escapes a vCard 3.0 text value so it can't break out into new properties */
+export function escapeVCardValue(value: string): string {
+  return value
+    .replace(/\\/g, '\\\\')
+    .replace(/\r\n|\r|\n/g, '\\n')
+    .replace(/;/g, '\\;')
+    .replace(/,/g, '\\,');
+}
+
 export function generateVCard(contact: Contact): string {
+  const nameParts = contact.name.trim().split(/\s+/);
+  const lastName = nameParts.length > 1 ? nameParts[nameParts.length - 1] : '';
+  const firstNames = (nameParts.length > 1 ? nameParts.slice(0, -1) : nameParts).join(' ');
+
   const vcard = [
     'BEGIN:VCARD',
     'VERSION:3.0',
-    `FN:${contact.name}`,
-    `N:${contact.name.split(' ').reverse().join(';')};;;`,
+    `FN:${escapeVCardValue(contact.name)}`,
+    `N:${escapeVCardValue(lastName)};${escapeVCardValue(firstNames)};;;`,
   ];
 
   if (contact.company) {
-    vcard.push(`ORG:${contact.company}`);
+    vcard.push(`ORG:${escapeVCardValue(contact.company)}`);
   }
 
   if (contact.title) {
-    vcard.push(`TITLE:${contact.title}`);
+    vcard.push(`TITLE:${escapeVCardValue(contact.title)}`);
   }
 
   if (contact.email) {
-    vcard.push(`EMAIL;TYPE=INTERNET:${contact.email}`);
+    vcard.push(`EMAIL;TYPE=INTERNET:${escapeVCardValue(contact.email)}`);
   }
 
   if (contact.phone) {
-    vcard.push(`TEL;TYPE=CELL:${contact.phone}`);
+    vcard.push(`TEL;TYPE=CELL:${escapeVCardValue(contact.phone)}`);
   }
 
-  if (contact.linkedin_url) {
-    vcard.push(`URL:${contact.linkedin_url}`);
+  const linkedin = safeHttpUrl(contact.linkedin_url);
+  if (linkedin) {
+    vcard.push(`URL:${linkedin}`);
   }
 
   if (contact.notes) {
-    vcard.push(`NOTE:${contact.notes.replace(/\n/g, '\\n')}`);
+    vcard.push(`NOTE:${escapeVCardValue(contact.notes)}`);
   }
 
   vcard.push('END:VCARD');
 
   return vcard.join('\r\n');
 }
-
 export function downloadVCard(contact: Contact): void {
   const vcardContent = generateVCard(contact);
   const blob = new Blob([vcardContent], { type: 'text/vcard;charset=utf-8' });
@@ -77,12 +118,6 @@ export function generateHubSpotCSV(contact: Contact): string {
     '',
   ];
 
-  const escapeCsvValue = (value: string) => {
-    if (value.includes(',') || value.includes('"') || value.includes('\n')) {
-      return `"${value.replace(/"/g, '""')}"`;
-    }
-    return value;
-  };
 
   const csvContent = [
     headers.join(','),
@@ -125,12 +160,6 @@ export function generateSalesforceCSV(contact: Contact): string {
     contact.met_at || 'Networking',
   ];
 
-  const escapeCsvValue = (value: string) => {
-    if (value.includes(',') || value.includes('"') || value.includes('\n')) {
-      return `"${value.replace(/"/g, '""')}"`;
-    }
-    return value;
-  };
 
   const csvContent = [
     headers.join(','),
@@ -153,7 +182,8 @@ export function downloadCSV(content: string, filename: string): void {
 }
 
 export function createMailtoLink(email: string, subject?: string, body?: string): string {
-  let mailto = `mailto:${email}`;
+  // Encode the address so a stored value like "a@b.com?bcc=x" can't add parameters
+  let mailto = `mailto:${encodeURIComponent(email.trim()).replace(/%40/g, '@')}`;
   const params = [];
 
   if (subject) {

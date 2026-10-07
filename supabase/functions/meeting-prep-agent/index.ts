@@ -1,10 +1,13 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "npm:@supabase/supabase-js@2.57.4";
+import { enforceDailyLimit, logUsage, requireUser } from "../_shared/guard.ts";
 import {
   getContact,
   getRecentInteractions,
   getNotes,
   generateConversationStarters,
+  type Contact,
+  type Interaction,
 } from "../_shared/agent-toolkit.ts";
 
 const corsHeaders = {
@@ -15,7 +18,7 @@ const corsHeaders = {
 
 interface MeetingPrepRequest {
   contact_id: string;
-  contact?: any; // Optional full contact object as fallback
+  contact?: Contact; // Optional full contact object as fallback
   meeting?: {
     title?: string | null;
     datetime?: string | null;
@@ -55,6 +58,13 @@ Deno.serve(async (req: Request) => {
         }
       );
     }
+
+    // Per-user daily cap on AI spend (counted per attempt)
+    const guardCtx = await requireUser(req);
+    if (guardCtx instanceof Response) return guardCtx;
+    const limited = await enforceDailyLimit(req, guardCtx, "meeting_prep", 20);
+    if (limited) return limited;
+    await logUsage(guardCtx, "meeting_prep");
 
     const requestData: MeetingPrepRequest = await req.json();
 
@@ -145,8 +155,7 @@ Deno.serve(async (req: Request) => {
     const briefingSummary = generateBriefingSummary(
       contact,
       interactions,
-      notes,
-      startersResponse.context_source
+      notes
     );
 
     const allStarters = [
@@ -180,7 +189,7 @@ Deno.serve(async (req: Request) => {
 
     return new Response(
       JSON.stringify({
-        error: error.message || "Failed to prepare meeting briefing",
+        error: "Failed to prepare meeting briefing",
       }),
       {
         status: 500,
@@ -194,10 +203,9 @@ Deno.serve(async (req: Request) => {
 });
 
 function generateBriefingSummary(
-  contact: any,
-  interactions: any[],
-  notes: string | null,
-  contextSource: string
+  contact: Contact,
+  interactions: Interaction[],
+  notes: string | null
 ): string {
   const parts: string[] = [];
 

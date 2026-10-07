@@ -1,53 +1,57 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
+import { enforceDailyLimit, json, logUsage, preflight, requireUser, serverError } from "../_shared/guard.ts";
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
-  "Access-Control-Allow-Headers": "Content-Type, Authorization, X-Client-Info, Apikey",
-};
+const DAILY_LIMIT = 20;
+const MAX_IMAGE_DATA_LENGTH = 8 * 1024 * 1024;
+// Only inline images: an arbitrary URL would make the AI provider fetch it on our behalf
+const DATA_URL_PATTERN = /^data:image\/(png|jpe?g|webp|gif);base64,[A-Za-z0-9+/=]+$/;
 
 Deno.serve(async (req: Request) => {
-  if (req.method === "OPTIONS") {
-    return new Response(null, {
-      status: 200,
-      headers: corsHeaders,
-    });
-  }
+  const pre = preflight(req);
+  if (pre) return pre;
+  if (req.method !== "POST") return json(req, { error: "Method not allowed" }, 405);
 
   try {
-    const { imageData } = await req.json();
+    const ctx = await requireUser(req);
+    if (ctx instanceof Response) return ctx;
 
-    if (!imageData) {
-      throw new Error('No image data provided');
+    const { imageData } = await req.json().catch(() => ({}));
+
+    if (!imageData || typeof imageData !== "string") {
+      return json(req, { error: "No image data provided" }, 400);
+    }
+    if (imageData.length > MAX_IMAGE_DATA_LENGTH) {
+      return json(req, { error: "Image is too large" }, 413);
+    }
+    if (!DATA_URL_PATTERN.test(imageData)) {
+      return json(req, { error: "Image must be a base64 PNG, JPEG, WebP or GIF data URL" }, 400);
     }
 
-    const openaiApiKey = Deno.env.get('OPENAI_API_KEY');
+    const limited = await enforceDailyLimit(req, ctx, "process_ocr", DAILY_LIMIT);
+    if (limited) return limited;
+
+    const openaiApiKey = Deno.env.get("OPENAI_API_KEY");
     if (!openaiApiKey) {
-      throw new Error('OpenAI API key not configured');
+      return json(req, { error: "AI service is not configured" }, 500);
     }
 
-    const response = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
+    const response = await fetch("https://api.openai.com/v1/chat/completions", {
+      method: "POST",
       headers: {
-        'Authorization': `Bearer ${openaiApiKey}`,
-        'Content-Type': 'application/json',
+        "Authorization": `Bearer ${openaiApiKey}`,
+        "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: 'gpt-4o-mini',
+        model: "gpt-4o-mini",
         messages: [
           {
-            role: 'user',
+            role: "user",
             content: [
               {
-                type: 'text',
-                text: 'Extract all text from this image. If it\'s a business card, identify: name, title, company, email, and phone. Return the raw text exactly as it appears.',
+                type: "text",
+                text: "Extract all text from this image. If it's a business card, identify: name, title, company, email, and phone. Return the raw text exactly as it appears.",
               },
-              {
-                type: 'image_url',
-                image_url: {
-                  url: imageData,
-                },
-              },
+              { type: "image_url", image_url: { url: imageData } },
             ],
           },
         ],
@@ -56,34 +60,15 @@ Deno.serve(async (req: Request) => {
     });
 
     if (!response.ok) {
-      const error = await response.text();
-      console.error('OpenAI API error:', error);
-      throw new Error('Failed to process image');
+      console.error("OpenAI API error:", response.status, await response.text());
+      return json(req, { error: "Failed to process image" }, 502);
     }
 
     const data = await response.json();
-    const extractedText = data.choices[0].message.content;
+    await logUsage(ctx, "process_ocr", { tokens_used: data.usage?.total_tokens ?? null });
 
-    return new Response(
-      JSON.stringify({ text: extractedText }),
-      {
-        headers: {
-          ...corsHeaders,
-          'Content-Type': 'application/json',
-        },
-      },
-    );
+    return json(req, { text: data.choices?.[0]?.message?.content ?? "" });
   } catch (error) {
-    console.error('Error in process-ocr:', error);
-    return new Response(
-      JSON.stringify({ error: error.message }),
-      {
-        status: 500,
-        headers: {
-          ...corsHeaders,
-          'Content-Type': 'application/json',
-        },
-      },
-    );
+    return serverError(req, "Error in process-ocr function", error);
   }
 });
