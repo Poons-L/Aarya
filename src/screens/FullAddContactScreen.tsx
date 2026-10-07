@@ -170,17 +170,12 @@ export function FullAddContactScreen({ contactId, onBack, onSave }: FullAddConta
         tags,
       };
 
-      if (contactToEdit) {
-        await updateContact(contactToEdit.id, contactData);
-      } else {
-        await addContact(contactData);
-      }
+      const { error } = contactToEdit
+        ? await updateContact(contactToEdit.id, contactData)
+        : await addContact(contactData);
+      if (error) throw new Error(error);
 
-      if (isEdit) {
-        onSave();
-      } else {
-        onSave();
-      }
+      onSave();
     } catch (error) {
       console.error('Error saving contact:', error);
       alert('Failed to save contact. Please try again.');

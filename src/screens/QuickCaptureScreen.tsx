@@ -150,12 +150,13 @@ export function QuickCaptureScreen({ onBack, onComplete }: QuickCaptureScreenPro
 
     setLoading(true);
     try {
-      await addContact({
+      const { error } = await addContact({
         name: name.trim(),
         photo_url: photoPreview,
         notes: note,
         met_date: new Date().toISOString().split('T')[0],
       });
+      if (error) throw new Error(error);
       onComplete();
     } catch (error) {
       console.error('Error saving contact:', error);
@@ -168,7 +169,7 @@ export function QuickCaptureScreen({ onBack, onComplete }: QuickCaptureScreenPro
   return (
     <div className="h-full bg-gradient-to-br from-slate-50 to-slate-100 flex flex-col">
       <div className="bg-white border-b border-slate-200 px-6 py-4 flex items-center justify-between">
-        <button onClick={() => onComplete()} className="text-slate-600 active:text-slate-900">
+        <button onClick={() => onBack()} aria-label="Back" className="text-slate-600 active:text-slate-900">
           <ArrowLeft size={24} />
         </button>
         <h1 className="text-lg font-semibold text-slate-900">Quick Capture</h1>

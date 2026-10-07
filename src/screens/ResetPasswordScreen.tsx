@@ -45,8 +45,8 @@ export function ResetPasswordScreen({ onComplete }: ResetPasswordScreenProps) {
       setTimeout(() => {
         onComplete();
       }, 2000);
-    } catch (err: any) {
-      setError(`Failed to update password: ${err.message}`);
+    } catch (err) {
+      setError(`Failed to update password: ${(err as Error).message}`);
     } finally {
       setLoading(false);
     }

@@ -1,6 +1,13 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
+import { notifyRemindersChanged } from './useReminders';
+
+export interface InteractionEntry {
+  date: string;
+  note: string;
+  type?: string;
+}
 
 export interface Contact {
   id: string;
@@ -16,7 +23,7 @@ export interface Contact {
   met_date: string;
   notes?: string;
   last_contact?: string;
-  interaction_history?: any[];
+  interaction_history?: InteractionEntry[];
   birthday?: string;
   enrichment_status?: string;
   last_enriched_at?: string;
@@ -70,8 +77,8 @@ export function useContacts() {
 
       setContacts(contactsWithTags);
       setError(null);
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err) {
+      setError((err as Error).message);
     } finally {
       setLoading(false);
     }
@@ -120,8 +127,8 @@ export function useContacts() {
 
       await fetchContacts();
       return { data, error: null };
-    } catch (err: any) {
-      return { data: null, error: err.message };
+    } catch (err) {
+      return { data: null, error: (err as Error).message };
     }
   };
 
@@ -155,8 +162,8 @@ export function useContacts() {
 
       await fetchContacts();
       return { data, error: null };
-    } catch (err: any) {
-      return { data: null, error: err.message };
+    } catch (err) {
+      return { data: null, error: (err as Error).message };
     }
   };
 
@@ -173,9 +180,11 @@ export function useContacts() {
       if (error) throw error;
 
       await fetchContacts();
+      // Linked reminders lose their contact (ON DELETE SET NULL)
+      notifyRemindersChanged();
       return { error: null };
-    } catch (err: any) {
-      return { error: err.message };
+    } catch (err) {
+      return { error: (err as Error).message };
     }
   };
 
@@ -197,8 +206,8 @@ export function useContacts() {
         .getPublicUrl(fileName);
 
       return { url: publicUrl, error: null };
-    } catch (err: any) {
-      return { url: null, error: err.message };
+    } catch (err) {
+      return { url: null, error: (err as Error).message };
     }
   };
 

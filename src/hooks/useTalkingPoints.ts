@@ -114,8 +114,8 @@ export function useTalkingPoints() {
         monthlyUsed: data.monthlyUsed,
         monthlyLimit: data.monthlyLimit,
       });
-    } catch (err: any) {
-      setError(err.message || 'Error connecting to service.');
+    } catch (err) {
+      setError((err as Error).message || 'Error connecting to service.');
     } finally {
       setLoading(false);
     }

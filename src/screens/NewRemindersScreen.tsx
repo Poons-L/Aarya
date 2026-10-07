@@ -1,30 +1,44 @@
 import { useState, useMemo } from 'react';
-import { Bell, Plus, Check, Clock, Calendar, AlertCircle } from 'lucide-react';
-import { useReminders } from '../hooks/useReminders';
-import { useContacts } from '../hooks/useContacts';
+import { Bell, Plus, Check, Calendar, AlertCircle, Trash2 } from 'lucide-react';
+import { useReminders, Reminder } from '../hooks/useReminders';
+import { useContacts, Contact } from '../hooks/useContacts';
 
 interface NewRemindersScreenProps {
   onNavigate: (screen: string) => void;
   onViewContact: (contactId: string) => void;
 }
 
+const formatDate = (dateString: string) => {
+  const date = new Date(dateString);
+  const today = new Date();
+  const tomorrow = new Date(today);
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  const yesterday = new Date(today);
+  yesterday.setDate(yesterday.getDate() - 1);
+
+  if (date.toDateString() === today.toDateString()) return 'Today';
+  if (date.toDateString() === tomorrow.toDateString()) return 'Tomorrow';
+  if (date.toDateString() === yesterday.toDateString()) return 'Yesterday';
+
+  return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+};
+
 export function NewRemindersScreen({ onNavigate, onViewContact }: NewRemindersScreenProps) {
   const { reminders, updateReminder, deleteReminder } = useReminders();
   const { contacts } = useContacts();
   const [filter, setFilter] = useState<'all' | 'upcoming' | 'overdue' | 'completed'>('upcoming');
 
-  const now = new Date();
-
   const categorizedReminders = useMemo(() => {
+    const now = new Date();
     const overdue = reminders.filter(r => !r.completed && new Date(r.due_date) < now);
     const upcoming = reminders.filter(r => !r.completed && new Date(r.due_date) >= now);
     const completed = reminders.filter(r => r.completed);
 
     return { overdue, upcoming, completed };
-  }, [reminders, now]);
+  }, [reminders]);
 
   const displayedReminders = useMemo(() => {
-    let filtered = [];
+    let filtered: Reminder[];
 
     switch (filter) {
       case 'overdue':
@@ -41,7 +55,7 @@ export function NewRemindersScreen({ onNavigate, onViewContact }: NewRemindersSc
         filtered = reminders;
     }
 
-    return filtered.sort((a, b) => {
+    return [...filtered].sort((a, b) => {
       if (a.completed !== b.completed) {
         return a.completed ? 1 : -1;
       }
@@ -60,7 +74,10 @@ export function NewRemindersScreen({ onNavigate, onViewContact }: NewRemindersSc
     const reminder = reminders.find(r => r.id === reminderId);
     if (!reminder) return;
 
-    const newDate = new Date(reminder.due_date);
+    // Snoozing an overdue reminder should push it out from today, not from its stale due date
+    const base = new Date(reminder.due_date);
+    const now = new Date();
+    const newDate = base < now ? now : base;
     newDate.setDate(newDate.getDate() + days);
 
     await updateReminder(reminderId, {
@@ -68,23 +85,14 @@ export function NewRemindersScreen({ onNavigate, onViewContact }: NewRemindersSc
     });
   };
 
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    const today = new Date();
-    const tomorrow = new Date(today);
-    tomorrow.setDate(tomorrow.getDate() + 1);
-    const yesterday = new Date(today);
-    yesterday.setDate(yesterday.getDate() - 1);
-
-    if (date.toDateString() === today.toDateString()) return 'Today';
-    if (date.toDateString() === tomorrow.toDateString()) return 'Tomorrow';
-    if (date.toDateString() === yesterday.toDateString()) return 'Yesterday';
-
-    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  const handleDelete = async (reminder: Reminder) => {
+    if (!confirm(`Delete reminder "${reminder.title}"?`)) return;
+    const { error } = await deleteReminder(reminder.id);
+    if (error) alert('Failed to delete reminder. Please try again.');
   };
 
-  const getContact = (contactId: string | null) => {
-    if (!contactId) return null;
+  const getContact = (contactId?: string | null) => {
+    if (!contactId) return undefined;
     return contacts.find(c => c.id === contactId);
   };
 
@@ -186,141 +194,174 @@ export function NewRemindersScreen({ onNavigate, onViewContact }: NewRemindersSc
           </div>
         ) : (
           <div className="space-y-3 pb-4">
-            {displayedReminders.map(reminder => {
-              const contact = getContact(reminder.contact_id);
-              const isOverdue = !reminder.completed && new Date(reminder.due_date) < now;
-              const [showActions, setShowActions] = useState(false);
+            {displayedReminders.map(reminder => (
+              <ReminderCard
+                key={reminder.id}
+                reminder={reminder}
+                contact={getContact(reminder.contact_id)}
+                onToggleComplete={() => markComplete(reminder.id, !reminder.completed)}
+                onSnooze={(days) => snoozeReminder(reminder.id, days)}
+                onDelete={() => handleDelete(reminder)}
+                onViewContact={onViewContact}
+              />
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
 
-              return (
-                <div
-                  key={reminder.id}
-                  className={`bg-white rounded-xl p-4 shadow-sm border-2 transition-all ${
-                    reminder.completed
-                      ? 'border-emerald-200 opacity-60'
-                      : isOverdue
-                      ? 'border-red-300'
-                      : 'border-slate-200'
-                  }`}
-                >
-                  <div className="flex items-start gap-3">
+interface ReminderCardProps {
+  reminder: Reminder;
+  contact?: Contact;
+  onToggleComplete: () => void;
+  onSnooze: (days: number) => void;
+  onDelete: () => void;
+  onViewContact: (contactId: string) => void;
+}
+
+function ReminderCard({ reminder, contact, onToggleComplete, onSnooze, onDelete, onViewContact }: ReminderCardProps) {
+  const [showActions, setShowActions] = useState(false);
+  const isOverdue = !reminder.completed && new Date(reminder.due_date) < new Date();
+
+  return (
+    <div
+      className={`bg-white rounded-xl p-4 shadow-sm border-2 transition-all ${
+        reminder.completed
+          ? 'border-emerald-200 opacity-60'
+          : isOverdue
+          ? 'border-red-300'
+          : 'border-slate-200'
+      }`}
+    >
+      <div className="flex items-start gap-3">
+        <button
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            onToggleComplete();
+          }}
+          aria-label={reminder.completed ? 'Mark as not done' : 'Mark as done'}
+          className={`mt-1 flex-shrink-0 w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all ${
+            reminder.completed
+              ? 'bg-emerald-500 border-emerald-500'
+              : isOverdue
+              ? 'border-red-400'
+              : 'border-orange-400'
+          }`}
+        >
+          {reminder.completed && <Check size={16} className="text-white" />}
+        </button>
+
+        <div className="flex-1 min-w-0">
+          <div className={`font-semibold text-slate-900 mb-1 ${reminder.completed ? 'line-through' : ''}`}>
+            {reminder.title}
+          </div>
+
+          {reminder.description && (
+            <div className="text-sm text-slate-600 mb-2">
+              {reminder.description}
+            </div>
+          )}
+
+          <div className="flex items-center gap-2 flex-wrap">
+            <div className={`flex items-center gap-1 text-xs ${
+              isOverdue ? 'text-red-600' : 'text-slate-600'
+            }`}>
+              {isOverdue ? <AlertCircle size={14} /> : <Calendar size={14} />}
+              {formatDate(reminder.due_date)}
+            </div>
+
+            {contact && (
+              <button
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  onViewContact(contact.id);
+                }}
+                className="flex items-center gap-1 px-2 py-0.5 bg-orange-100 text-orange-700 text-xs rounded-full active:scale-95 transition-transform"
+              >
+                {contact.name}
+              </button>
+            )}
+
+            {reminder.priority !== 'medium' && (
+              <span className={`px-2 py-0.5 text-xs rounded-full ${
+                reminder.priority === 'high'
+                  ? 'bg-red-100 text-red-700'
+                  : 'bg-slate-100 text-slate-600'
+              }`}>
+                {reminder.priority}
+              </span>
+            )}
+          </div>
+
+          <div className="mt-3">
+            {!showActions ? (
+              <button
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  setShowActions(true);
+                }}
+                className="text-xs text-orange-600 font-medium"
+              >
+                Actions
+              </button>
+            ) : (
+              <div className="flex gap-2 flex-wrap">
+                {!reminder.completed && (
+                  <>
                     <button
                       onClick={(e) => {
                         e.preventDefault();
                         e.stopPropagation();
-                        markComplete(reminder.id, !reminder.completed);
+                        onSnooze(1);
+                        setShowActions(false);
                       }}
-                      className={`mt-1 flex-shrink-0 w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all ${
-                        reminder.completed
-                          ? 'bg-emerald-500 border-emerald-500'
-                          : isOverdue
-                          ? 'border-red-400'
-                          : 'border-orange-400'
-                      }`}
+                      className="px-3 py-1 bg-amber-100 text-amber-700 text-xs rounded-lg font-medium active:scale-95 transition-transform"
                     >
-                      {reminder.completed && <Check size={16} className="text-white" />}
+                      +1 day
                     </button>
-
-                    <div className="flex-1 min-w-0">
-                      <div className={`font-semibold text-slate-900 mb-1 ${reminder.completed ? 'line-through' : ''}`}>
-                        {reminder.title}
-                      </div>
-
-                      {reminder.description && (
-                        <div className="text-sm text-slate-600 mb-2">
-                          {reminder.description}
-                        </div>
-                      )}
-
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <div className={`flex items-center gap-1 text-xs ${
-                          isOverdue ? 'text-red-600' : 'text-slate-600'
-                        }`}>
-                          {isOverdue ? <AlertCircle size={14} /> : <Calendar size={14} />}
-                          {formatDate(reminder.due_date)}
-                        </div>
-
-                        {contact && (
-                          <button
-                            onClick={(e) => {
-                              e.preventDefault();
-                              e.stopPropagation();
-                              onViewContact(contact.id);
-                            }}
-                            className="flex items-center gap-1 px-2 py-0.5 bg-orange-100 text-orange-700 text-xs rounded-full active:scale-95 transition-transform"
-                          >
-                            {contact.name}
-                          </button>
-                        )}
-
-                        {reminder.priority !== 'medium' && (
-                          <span className={`px-2 py-0.5 text-xs rounded-full ${
-                            reminder.priority === 'high'
-                              ? 'bg-red-100 text-red-700'
-                              : 'bg-slate-100 text-slate-600'
-                          }`}>
-                            {reminder.priority}
-                          </span>
-                        )}
-                      </div>
-
-                      {!reminder.completed && (
-                        <div className="mt-3">
-                          {!showActions ? (
-                            <button
-                              onClick={(e) => {
-                                e.preventDefault();
-                                e.stopPropagation();
-                                setShowActions(true);
-                              }}
-                              className="text-xs text-orange-600 font-medium"
-                            >
-                              Actions
-                            </button>
-                          ) : (
-                            <div className="flex gap-2">
-                              <button
-                                onClick={(e) => {
-                                  e.preventDefault();
-                                  e.stopPropagation();
-                                  snoozeReminder(reminder.id, 1);
-                                  setShowActions(false);
-                                }}
-                                className="px-3 py-1 bg-amber-100 text-amber-700 text-xs rounded-lg font-medium active:scale-95 transition-transform"
-                              >
-                                +1 day
-                              </button>
-                              <button
-                                onClick={(e) => {
-                                  e.preventDefault();
-                                  e.stopPropagation();
-                                  snoozeReminder(reminder.id, 7);
-                                  setShowActions(false);
-                                }}
-                                className="px-3 py-1 bg-amber-100 text-amber-700 text-xs rounded-lg font-medium active:scale-95 transition-transform"
-                              >
-                                +1 week
-                              </button>
-                              <button
-                                onClick={(e) => {
-                                  e.preventDefault();
-                                  e.stopPropagation();
-                                  setShowActions(false);
-                                }}
-                                className="px-3 py-1 bg-slate-100 text-slate-600 text-xs rounded-lg font-medium"
-                              >
-                                Cancel
-                              </button>
-                            </div>
-                          )}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
+                    <button
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        onSnooze(7);
+                        setShowActions(false);
+                      }}
+                      className="px-3 py-1 bg-amber-100 text-amber-700 text-xs rounded-lg font-medium active:scale-95 transition-transform"
+                    >
+                      +1 week
+                    </button>
+                  </>
+                )}
+                <button
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    onDelete();
+                  }}
+                  className="flex items-center gap-1 px-3 py-1 bg-red-100 text-red-700 text-xs rounded-lg font-medium active:scale-95 transition-transform"
+                >
+                  <Trash2 size={12} />
+                  Delete
+                </button>
+                <button
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    setShowActions(false);
+                  }}
+                  className="px-3 py-1 bg-slate-100 text-slate-600 text-xs rounded-lg font-medium"
+                >
+                  Cancel
+                </button>
+              </div>
+            )}
           </div>
-        )}
+        </div>
       </div>
     </div>
   );

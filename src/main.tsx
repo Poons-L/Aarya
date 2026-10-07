@@ -26,16 +26,16 @@ console.error = (...args) => {
   try {
     const errorDiv = document.getElementById('error-log');
     if (errorDiv) {
-      errorDiv.innerHTML += `<div style="border-bottom: 1px solid #ccc; padding: 8px; font-family: monospace; font-size: 12px;">${new Date().toISOString()}: ${args.join(' ')}</div>`;
+      // textContent, not innerHTML: error messages can contain user-entered data
+      const entry = document.createElement('div');
+      entry.style.cssText = 'border-bottom: 1px solid #ccc; padding: 8px; font-family: monospace; font-size: 12px;';
+      entry.textContent = `${new Date().toISOString()}: ${args.join(' ')}`;
+      errorDiv.appendChild(entry);
     }
-  } catch (e) {
+  } catch {
     // Ignore logging errors
   }
 };
-
-console.log('Re.Me App Starting - Version:', import.meta.env.MODE);
-console.log('Supabase URL available:', !!import.meta.env.VITE_SUPABASE_URL);
-console.log('Supabase Key available:', !!import.meta.env.VITE_SUPABASE_ANON_KEY);
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

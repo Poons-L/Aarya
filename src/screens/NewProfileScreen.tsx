@@ -1,8 +1,14 @@
 import { useState } from 'react';
-import { User, Mail, Camera, LogOut, Info, Bell, Shield, ChevronRight, Lock, MessageSquare } from 'lucide-react';
+import { User, Mail, Camera, LogOut, Info, Bell, Shield, ChevronRight, Lock, MessageSquare, X, Download } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
+import { useContacts } from '../hooks/useContacts';
+import { useReminders } from '../hooks/useReminders';
+import { getNotificationsEnabled, setNotificationsEnabled, notificationsSupported } from '../hooks/useReminderNotifications';
 
 const OWNER_EMAIL = 'chicchori@gmail.com';
+const APP_VERSION = '1.3.0';
+
+type Sheet = 'notifications' | 'privacy' | 'about' | null;
 
 interface NewProfileScreenProps {
   onNavigate: (screen: string) => void;
@@ -16,6 +22,39 @@ export function NewProfileScreen({ onNavigate }: NewProfileScreenProps) {
   const [formData, setFormData] = useState({
     full_name: profile?.full_name || '',
   });
+  const { contacts } = useContacts();
+  const { reminders } = useReminders();
+  const [sheet, setSheet] = useState<Sheet>(null);
+  const [notificationsOn, setNotificationsOn] = useState(getNotificationsEnabled);
+  const [notificationsBlocked, setNotificationsBlocked] = useState(
+    notificationsSupported() && Notification.permission === 'denied'
+  );
+
+  const toggleNotifications = async () => {
+    const enabled = await setNotificationsEnabled(!notificationsOn);
+    setNotificationsOn(enabled);
+    setNotificationsBlocked(notificationsSupported() && Notification.permission === 'denied');
+  };
+
+  const handleExportData = () => {
+    const data = {
+      exportedAt: new Date().toISOString(),
+      version: APP_VERSION,
+      profile: { full_name: profile?.full_name ?? null, email: user?.email ?? null },
+      contacts,
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      reminders: reminders.map(({ contact, ...rest }) => rest),
+    };
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `re-me-export-${new Date().toISOString().split('T')[0]}.json`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
 
   const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -31,10 +70,11 @@ export function NewProfileScreen({ onNavigate }: NewProfileScreenProps) {
   const handleSave = async () => {
     setLoading(true);
     try {
-      await updateProfile({
+      const { error } = await updateProfile({
         full_name: formData.full_name,
         avatar_url: photoPreview
       });
+      if (error) throw new Error(error);
       setEditing(false);
     } catch (error) {
       console.error('Error updating profile:', error);
@@ -138,23 +178,35 @@ export function NewProfileScreen({ onNavigate }: NewProfileScreenProps) {
         <div className="bg-white rounded-2xl shadow-sm border border-slate-200 mb-6 overflow-hidden">
           <h3 className="text-sm font-semibold text-slate-700 px-4 pt-4 pb-2">Settings</h3>
 
-          <button className="w-full flex items-center justify-between p-4 border-t border-slate-200 active:bg-slate-50 transition-colors">
+          <button
+            onClick={() => setSheet('notifications')}
+            className="w-full flex items-center justify-between p-4 border-t border-slate-200 active:bg-slate-50 transition-colors"
+          >
             <div className="flex items-center gap-3">
               <Bell size={20} className="text-slate-600" />
               <span className="text-slate-900 font-medium">Notifications</span>
             </div>
-            <ChevronRight size={20} className="text-slate-400" />
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-slate-500">{notificationsOn ? 'On' : 'Off'}</span>
+              <ChevronRight size={20} className="text-slate-400" />
+            </div>
           </button>
 
-          <button className="w-full flex items-center justify-between p-4 border-t border-slate-200 active:bg-slate-50 transition-colors">
+          <button
+            onClick={() => setSheet('privacy')}
+            className="w-full flex items-center justify-between p-4 border-t border-slate-200 active:bg-slate-50 transition-colors"
+          >
             <div className="flex items-center gap-3">
               <Shield size={20} className="text-slate-600" />
-              <span className="text-slate-900 font-medium">Privacy</span>
+              <span className="text-slate-900 font-medium">Privacy & Data</span>
             </div>
             <ChevronRight size={20} className="text-slate-400" />
           </button>
 
-          <button className="w-full flex items-center justify-between p-4 border-t border-slate-200 active:bg-slate-50 transition-colors">
+          <button
+            onClick={() => setSheet('about')}
+            className="w-full flex items-center justify-between p-4 border-t border-slate-200 active:bg-slate-50 transition-colors"
+          >
             <div className="flex items-center gap-3">
               <Info size={20} className="text-slate-600" />
               <span className="text-slate-900 font-medium">About</span>
@@ -190,7 +242,7 @@ export function NewProfileScreen({ onNavigate }: NewProfileScreenProps) {
         <div className="bg-white rounded-2xl p-4 shadow-sm border border-slate-200 mb-6">
           <div className="text-center text-xs text-slate-500 space-y-1">
             <div className="font-semibold text-slate-700">Re.Me Networking Assistant</div>
-            <div>Version 1.0.0</div>
+            <div>Version {APP_VERSION}</div>
             <div>Never forget a connection</div>
           </div>
         </div>
@@ -205,6 +257,109 @@ export function NewProfileScreen({ onNavigate }: NewProfileScreenProps) {
           </div>
         </button>
       </div>
+
+      {sheet && (
+        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40" onClick={() => setSheet(null)}>
+          <div
+            className="w-full max-w-[430px] bg-white rounded-t-3xl p-6 pb-10 max-h-[80vh] overflow-y-auto"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-bold text-slate-900">
+                {sheet === 'notifications' ? 'Notifications' : sheet === 'privacy' ? 'Privacy & Data' : 'About Re.Me'}
+              </h2>
+              <button onClick={() => setSheet(null)} className="p-1 text-slate-400" aria-label="Close">
+                <X size={20} />
+              </button>
+            </div>
+
+            {sheet === 'notifications' && (
+              <div className="space-y-4">
+                <div className="flex items-center justify-between p-4 bg-slate-50 rounded-xl">
+                  <div className="pr-4">
+                    <div className="font-medium text-slate-900">Reminder alerts</div>
+                    <div className="text-xs text-slate-600 mt-1">
+                      Get a browser notification when a follow-up comes due while Re.Me is open.
+                    </div>
+                  </div>
+                  <button
+                    role="switch"
+                    aria-checked={notificationsOn}
+                    onClick={toggleNotifications}
+                    disabled={!notificationsSupported() || (notificationsBlocked && !notificationsOn)}
+                    className={`relative w-12 h-7 rounded-full flex-shrink-0 transition-colors disabled:opacity-40 ${
+                      notificationsOn ? 'bg-orange-500' : 'bg-slate-300'
+                    }`}
+                  >
+                    <span
+                      className={`absolute top-1 w-5 h-5 bg-white rounded-full shadow transition-all ${
+                        notificationsOn ? 'left-6' : 'left-1'
+                      }`}
+                    />
+                  </button>
+                </div>
+                {!notificationsSupported() && (
+                  <p className="text-xs text-slate-500">This browser doesn't support notifications.</p>
+                )}
+                {notificationsBlocked && (
+                  <p className="text-xs text-red-600">
+                    Notifications are blocked for this site. Allow them in your browser's site settings, then try again.
+                  </p>
+                )}
+                <p className="text-xs text-slate-500">
+                  Overdue reminders always show as a badge on the Reminders tab.
+                </p>
+              </div>
+            )}
+
+            {sheet === 'privacy' && (
+              <div className="space-y-4 text-sm text-slate-700">
+                <p>
+                  Your contacts, notes and reminders are stored in your private account. Database
+                  security rules mean only you can read or change them.
+                </p>
+                <p>
+                  AI features (talking points, conversation starters, smart paste and voice
+                  transcription) send the relevant contact details or audio to OpenAI to generate a
+                  result.
+                </p>
+                <button
+                  onClick={handleExportData}
+                  className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-orange-500 to-pink-500 text-white py-3 rounded-xl font-medium active:scale-95 transition-transform"
+                >
+                  <Download size={18} />
+                  Export my data ({contacts.length} contacts, {reminders.length} reminders)
+                </button>
+                <p className="text-xs text-slate-500">
+                  Downloads a JSON file. To delete your account and all data, send a request via Send Feedback.
+                </p>
+              </div>
+            )}
+
+            {sheet === 'about' && (
+              <div className="space-y-3 text-sm text-slate-700">
+                <p>
+                  Re.Me is your networking assistant: capture people you meet, remember what you talked
+                  about, and get a nudge (and talking points) before you reconnect.
+                </p>
+                <div className="p-4 bg-slate-50 rounded-xl text-xs text-slate-600 space-y-1">
+                  <div>Version {APP_VERSION}</div>
+                  <div>Signed in as {user?.email}</div>
+                </div>
+                <button
+                  onClick={() => {
+                    setSheet(null);
+                    onNavigate('feedback');
+                  }}
+                  className="w-full bg-slate-100 text-slate-800 py-3 rounded-xl font-medium active:scale-95 transition-transform"
+                >
+                  Send Feedback
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

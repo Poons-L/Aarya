@@ -16,12 +16,14 @@ import { FeedbackScreen } from './screens/FeedbackScreen';
 import { BottomTabNav } from './components/BottomTabNav';
 import { useAuth } from './contexts/AuthContext';
 import { useReminders } from './hooks/useReminders';
+import { useReminderNotifications } from './hooks/useReminderNotifications';
 
 type Tab = 'home' | 'contacts' | 'reminders' | 'profile';
 
 interface NavState {
   screen: 'welcome' | 'onboarding' | 'auth' | 'resetPassword' | 'home' | 'contacts' | 'contactDetail' | 'addContact' | 'editContact' | 'quickCapture' | 'reminders' | 'addReminder' | 'profile' | 'admin' | 'feedback';
   contactId?: string | null;
+  authMode?: 'signIn' | 'signUp';
 }
 
 function NewApp() {
@@ -30,21 +32,17 @@ function NewApp() {
 
   const { user, loading: authLoading } = useAuth();
   const { reminders } = useReminders();
+  useReminderNotifications(reminders);
 
   const overdueCount = reminders.filter(
     r => !r.completed && new Date(r.due_date) < new Date()
   ).length;
-
-  useEffect(() => {
-    console.log('navState changed:', navState);
-  }, [navState]);
 
   const [oauthError, setOauthError] = useState<string | null>(null);
 
   useEffect(() => {
     const hash = window.location.hash;
     if (hash && hash.includes('type=recovery')) {
-      console.log('Password reset link detected, showing reset password screen');
       setNavState({ screen: 'resetPassword', contactId: null });
       setHistory([]);
       return;
@@ -109,36 +107,32 @@ function NewApp() {
     navState.screen === 'profile'
   );
 
-  console.log('Rendering NewApp with navState:', navState);
 
   let screenContent = null;
 
   if (navState.screen === 'welcome') {
-    screenContent = <WelcomeScreen onGetStarted={() => {
-      console.log('Welcome: onGetStarted clicked');
-      setNavState({ screen: 'onboarding', contactId: null });
-    }} />;
+    screenContent = <WelcomeScreen
+      onGetStarted={() => setNavState({ screen: 'onboarding', contactId: null })}
+      onSignIn={() => setNavState({ screen: 'auth', contactId: null, authMode: 'signIn' })}
+    />;
   } else if (navState.screen === 'onboarding') {
     screenContent = <OnboardingScreen onComplete={() => {
-      console.log('Onboarding: onComplete clicked');
-      setNavState({ screen: 'auth', contactId: null });
+      setNavState({ screen: 'auth', contactId: null, authMode: 'signUp' });
     }} />;
   } else if (navState.screen === 'auth') {
     screenContent = <AuthScreen
       onBack={() => {
-        console.log('Auth: onBack clicked');
         setNavState({ screen: 'welcome', contactId: null });
       }}
       onAuth={() => {
-        console.log('Auth: onAuth success');
         setNavState({ screen: 'home', contactId: null });
       }}
       initialError={oauthError}
+      initialMode={navState.authMode}
     />;
   } else if (navState.screen === 'resetPassword') {
     screenContent = <ResetPasswordScreen
       onComplete={() => {
-        console.log('ResetPassword: onComplete clicked');
         window.location.hash = '';
         setNavState({ screen: 'auth', contactId: null });
       }}
@@ -146,12 +140,10 @@ function NewApp() {
   } else if (navState.screen === 'home') {
     screenContent = <NewHomeScreen
       onNavigate={(screen: string) => {
-        console.log('HomeScreen: onNavigate called with', screen);
         setHistory(prev => [...prev, navState]);
-        setNavState({ screen: screen as any, contactId: null });
+        setNavState({ screen: screen as NavState['screen'], contactId: null });
       }}
       onViewContact={(contactId: string) => {
-        console.log('HomeScreen: onViewContact called with', contactId);
         setHistory(prev => [...prev, navState]);
         setNavState({ screen: 'contactDetail', contactId });
       }}
@@ -159,13 +151,10 @@ function NewApp() {
   } else if (navState.screen === 'contacts') {
     screenContent = <NewContactsScreen
       onViewContact={(contactId) => {
-        console.log('Contacts: onViewContact clicked with contactId:', contactId);
-        console.log('Setting navState to contactDetail with contactId:', contactId);
         setHistory(prev => [...prev, navState]);
         setNavState({ screen: 'contactDetail', contactId });
       }}
       onAddContact={() => {
-        console.log('Contacts: onAddContact clicked');
         setNavState({ screen: 'addContact', contactId: null });
       }}
     />;
@@ -173,7 +162,6 @@ function NewApp() {
     screenContent = <NewContactDetailScreen
       contactId={navState.contactId!}
       onBack={() => {
-        console.log('ContactDetail: onBack clicked');
         if (history.length === 0) {
           setNavState({ screen: 'contacts', contactId: null });
         } else {
@@ -184,25 +172,27 @@ function NewApp() {
         }
       }}
       onEditContact={(contactId: string) => {
-        console.log('ContactDetail: onEditContact called with', contactId);
         setHistory(prev => [...prev, navState]);
         setNavState({ screen: 'editContact', contactId });
       }}
       onAddReminder={(contactId: string) => {
-        console.log('ContactDetail: onAddReminder called with', contactId);
         setHistory(prev => [...prev, navState]);
         setNavState({ screen: 'addReminder', contactId });
       }}
       onQuickCapture={() => {
-        console.log('ContactDetail: onQuickCapture clicked');
         setHistory(prev => [...prev, navState]);
         setNavState({ screen: 'quickCapture', contactId: null });
+      }}
+      onDeleted={() => {
+        // Drop any history entries that point at the deleted contact so Back can't land on them
+        const deletedId = navState.contactId;
+        setHistory(prev => prev.filter(h => h.contactId !== deletedId));
+        setNavState({ screen: 'contacts', contactId: null });
       }}
     />;
   } else if (navState.screen === 'addContact') {
     screenContent = <FullAddContactScreen
       onBack={() => {
-        console.log('AddContact: onBack clicked');
         if (history.length === 0) {
           setNavState({ screen: 'contacts', contactId: null });
         } else {
@@ -213,7 +203,6 @@ function NewApp() {
         }
       }}
       onSave={() => {
-        console.log('AddContact: onSave clicked');
         setNavState({ screen: 'contacts', contactId: null });
       }}
     />;
@@ -221,7 +210,6 @@ function NewApp() {
     screenContent = <FullAddContactScreen
       contactId={navState.contactId!}
       onBack={() => {
-        console.log('EditContact: onBack clicked');
         if (history.length === 0) {
           setNavState({ screen: 'contacts', contactId: null });
         } else {
@@ -232,7 +220,6 @@ function NewApp() {
         }
       }}
       onSave={() => {
-        console.log('EditContact: onSave clicked');
         if (history.length === 0) {
           setNavState({ screen: 'contacts', contactId: null });
         } else {
@@ -246,7 +233,6 @@ function NewApp() {
   } else if (navState.screen === 'quickCapture') {
     screenContent = <QuickCaptureScreen
       onBack={() => {
-        console.log('QuickCapture: onBack clicked');
         if (history.length === 0) {
           setNavState({ screen: 'home', contactId: null });
         } else {
@@ -257,19 +243,16 @@ function NewApp() {
         }
       }}
       onComplete={() => {
-        console.log('QuickCapture: onComplete clicked');
         setNavState({ screen: 'home', contactId: null });
       }}
     />;
   } else if (navState.screen === 'reminders') {
     screenContent = <NewRemindersScreen
       onNavigate={(screen: string) => {
-        console.log('RemindersScreen: onNavigate called with', screen);
         setHistory(prev => [...prev, navState]);
-        setNavState({ screen: screen as any, contactId: null });
+        setNavState({ screen: screen as NavState['screen'], contactId: null });
       }}
       onViewContact={(contactId: string) => {
-        console.log('RemindersScreen: onViewContact called with', contactId);
         setHistory(prev => [...prev, navState]);
         setNavState({ screen: 'contactDetail', contactId });
       }}
@@ -278,7 +261,6 @@ function NewApp() {
     screenContent = <NewAddReminderScreen
       contactId={navState.contactId ?? undefined}
       onBack={() => {
-        console.log('AddReminder: onBack clicked');
         if (history.length === 0) {
           setNavState({ screen: 'reminders', contactId: null });
         } else {
@@ -289,14 +271,12 @@ function NewApp() {
         }
       }}
       onSave={() => {
-        console.log('AddReminder: onSave clicked');
         setNavState({ screen: 'reminders', contactId: null });
       }}
     />;
   } else if (navState.screen === 'profile') {
     screenContent = <NewProfileScreen
       onNavigate={(screen: string) => {
-        console.log('Profile: onNavigate called with', screen);
         if (screen === 'welcome') {
           setNavState({ screen: 'welcome', contactId: null });
           setHistory([]);
@@ -312,7 +292,6 @@ function NewApp() {
   } else if (navState.screen === 'admin') {
     screenContent = <OwnerAdminDashboard
       onBack={() => {
-        console.log('Admin: onBack clicked');
         if (history.length === 0) {
           setNavState({ screen: 'profile', contactId: null });
         } else {
@@ -339,12 +318,10 @@ function NewApp() {
   } else {
     screenContent = <NewHomeScreen
       onNavigate={(screen: string) => {
-        console.log('HomeScreen (fallback): onNavigate called with', screen);
         setHistory(prev => [...prev, navState]);
-        setNavState({ screen: screen as any, contactId: null });
+        setNavState({ screen: screen as NavState['screen'], contactId: null });
       }}
       onViewContact={(contactId: string) => {
-        console.log('HomeScreen (fallback): onViewContact called with', contactId);
         setHistory(prev => [...prev, navState]);
         setNavState({ screen: 'contactDetail', contactId });
       }}
@@ -361,7 +338,6 @@ function NewApp() {
           <BottomTabNav
             activeTab={activeTab}
             onTabChange={(tab: Tab) => {
-              console.log('BottomNav: tab changed to', tab);
               setHistory(prev => [...prev, navState]);
               setNavState({ screen: tab, contactId: null });
             }}

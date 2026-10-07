@@ -5,12 +5,12 @@ import { useAuth } from '../contexts/AuthContext';
 export interface Reminder {
   id: string;
   user_id: string;
-  contact_id?: string;
+  contact_id?: string | null;
   title: string;
   description?: string;
   due_date: string;
   completed: boolean;
-  completed_at?: string;
+  completed_at?: string | null;
   priority: 'low' | 'medium' | 'high';
   created_at: string;
   updated_at: string;
@@ -20,13 +20,17 @@ export interface Reminder {
   };
 }
 
+// Several screens hold their own useReminders instance (e.g. the nav badge); this keeps them in sync
+const REMINDERS_CHANGED = 'reme:reminders-changed';
+export const notifyRemindersChanged = () => window.dispatchEvent(new Event(REMINDERS_CHANGED));
+
 export function useReminders() {
   const { user } = useAuth();
   const [reminders, setReminders] = useState<Reminder[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchReminders = async () => {
+  const fetchReminders = async (silent = false) => {
     if (!user) {
       setReminders([]);
       setLoading(false);
@@ -34,7 +38,7 @@ export function useReminders() {
     }
 
     try {
-      setLoading(true);
+      if (!silent) setLoading(true);
       const { data, error: fetchError } = await supabase
         .from('reminders')
         .select(`
@@ -48,8 +52,8 @@ export function useReminders() {
 
       setReminders(data || []);
       setError(null);
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err) {
+      setError((err as Error).message);
     } finally {
       setLoading(false);
     }
@@ -57,10 +61,13 @@ export function useReminders() {
 
   useEffect(() => {
     fetchReminders();
+    const handleChange = () => fetchReminders(true);
+    window.addEventListener(REMINDERS_CHANGED, handleChange);
+    return () => window.removeEventListener(REMINDERS_CHANGED, handleChange);
   }, [user]);
 
   const addReminder = async (reminderData: {
-    contact_id?: string;
+    contact_id?: string | null;
     title: string;
     description?: string;
     due_date: string;
@@ -82,10 +89,10 @@ export function useReminders() {
 
       if (error) throw error;
 
-      await fetchReminders();
+      notifyRemindersChanged();
       return { data, error: null };
-    } catch (err: any) {
-      return { data: null, error: err.message };
+    } catch (err) {
+      return { data: null, error: (err as Error).message };
     }
   };
 
@@ -103,10 +110,10 @@ export function useReminders() {
 
       if (error) throw error;
 
-      await fetchReminders();
+      notifyRemindersChanged();
       return { data, error: null };
-    } catch (err: any) {
-      return { data: null, error: err.message };
+    } catch (err) {
+      return { data: null, error: (err as Error).message };
     }
   };
 
@@ -129,10 +136,10 @@ export function useReminders() {
 
       if (error) throw error;
 
-      await fetchReminders();
+      notifyRemindersChanged();
       return { error: null };
-    } catch (err: any) {
-      return { error: err.message };
+    } catch (err) {
+      return { error: (err as Error).message };
     }
   };
 
@@ -144,6 +151,6 @@ export function useReminders() {
     updateReminder,
     toggleComplete,
     deleteReminder,
-    refetch: fetchReminders,
+    refetch: () => fetchReminders(),
   };
 }

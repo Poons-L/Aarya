@@ -45,7 +45,7 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    if (user.email !== OWNER_EMAIL) {
+    if (user.email?.toLowerCase() !== OWNER_EMAIL) {
       return new Response(
         JSON.stringify({ error: "Forbidden: Admin access required" }),
         { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }

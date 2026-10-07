@@ -7,7 +7,7 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "Content-Type, Authorization, X-Client-Info, Apikey",
 };
 
-const OWNER_EMAIL = "Chicchori@gmail.com";
+const OWNER_EMAIL = "chicchori@gmail.com";
 const DAILY_LIMIT = 5;
 const MONTHLY_LIMIT = 50;
 const CACHE_DAYS = 7;
@@ -103,7 +103,7 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    const isOwner = user.email === OWNER_EMAIL;
+    const isOwner = user.email?.toLowerCase() === OWNER_EMAIL;
 
     const { data: contact } = await supabase
       .from("contacts")

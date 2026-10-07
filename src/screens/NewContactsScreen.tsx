@@ -116,7 +116,7 @@ export function NewContactsScreen({ onViewContact, onAddContact }: NewContactsSc
 
           <select
             value={sortBy}
-            onChange={(e) => setSortBy(e.target.value as any)}
+            onChange={(e) => setSortBy(e.target.value as 'recent' | 'name' | 'company')}
             className="px-3 py-2 bg-slate-100 rounded-lg text-sm font-medium text-slate-700 focus:outline-none focus:ring-2 focus:ring-orange-400"
           >
             <option value="recent">Recent</option>
@@ -188,7 +188,6 @@ export function NewContactsScreen({ onViewContact, onAddContact }: NewContactsSc
                 onClick={(e) => {
                   e.preventDefault();
                   e.stopPropagation();
-                  console.log('clicked');
                   onViewContact(contact.id);
                 }}
                 className="w-full bg-white rounded-xl p-4 shadow-sm border border-slate-200 active:scale-98 transition-transform cursor-pointer select-none"

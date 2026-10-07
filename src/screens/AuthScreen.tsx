@@ -6,11 +6,12 @@ interface AuthScreenProps {
   onBack: () => void;
   onAuth: () => void;
   initialError?: string | null;
+  initialMode?: 'signIn' | 'signUp';
 }
 
-export function AuthScreen({ onBack, initialError }: AuthScreenProps) {
+export function AuthScreen({ onBack, initialError, initialMode = 'signIn' }: AuthScreenProps) {
   const { signIn, signUp, signInWithGoogle, resetPassword } = useAuth();
-  const [isSignUp, setIsSignUp] = useState(false);
+  const [isSignUp, setIsSignUp] = useState(initialMode === 'signUp');
   const [isForgotPassword, setIsForgotPassword] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -49,8 +50,8 @@ export function AuthScreen({ onBack, initialError }: AuthScreenProps) {
         const { error } = await signIn(email, password);
         if (error) throw error;
       }
-    } catch (err: any) {
-      const message = err.message || 'An error occurred';
+    } catch (err) {
+      const message = (err as Error).message || 'An error occurred';
       if (isSignUp) {
         if (message.includes('already registered') || message.includes('already exists')) {
           setError('This email is already registered. Try signing in instead.');
@@ -78,8 +79,8 @@ export function AuthScreen({ onBack, initialError }: AuthScreenProps) {
     try {
       const { error } = await signInWithGoogle();
       if (error) throw error;
-    } catch (err: any) {
-      const message = err.message || 'An error occurred';
+    } catch (err) {
+      const message = (err as Error).message || 'An error occurred';
       setError(`Google sign in failed: ${message}`);
       setGoogleLoading(false);
     }
@@ -106,8 +107,8 @@ export function AuthScreen({ onBack, initialError }: AuthScreenProps) {
         setIsForgotPassword(false);
         setSuccessMessage(null);
       }, 3000);
-    } catch (err: any) {
-      setError(`Failed to send reset email: ${err.message}`);
+    } catch (err) {
+      setError(`Failed to send reset email: ${(err as Error).message}`);
     } finally {
       setLoading(false);
     }

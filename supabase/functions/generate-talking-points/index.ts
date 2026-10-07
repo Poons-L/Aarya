@@ -8,7 +8,7 @@ const corsHeaders = {
     "Content-Type, Authorization, X-Client-Info, Apikey",
 };
 
-const OWNER_EMAIL = "Chicchori@gmail.com";
+const OWNER_EMAIL = "chicchori@gmail.com";
 const DAILY_LIMIT = 5;
 const MONTHLY_LIMIT = 50;
 const CACHE_HOURS = 24;
@@ -136,7 +136,7 @@ Deno.serve(async (req: Request) => {
     }
 
     // Rate limiting (skip for owner)
-    const isOwner = user.email === OWNER_EMAIL;
+    const isOwner = user.email?.toLowerCase() === OWNER_EMAIL;
     if (!isOwner) {
       const today = new Date();
       today.setHours(0, 0, 0, 0);

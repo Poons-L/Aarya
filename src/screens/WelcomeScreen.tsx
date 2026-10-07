@@ -2,9 +2,10 @@ import { Users } from 'lucide-react';
 
 interface WelcomeScreenProps {
   onGetStarted: () => void;
+  onSignIn: () => void;
 }
 
-export function WelcomeScreen({ onGetStarted }: WelcomeScreenProps) {
+export function WelcomeScreen({ onGetStarted, onSignIn }: WelcomeScreenProps) {
   return (
     <div className="h-full bg-gradient-to-br from-amber-400 via-orange-500 to-pink-500 flex flex-col items-center justify-between px-8 py-16 text-white">
       <div className="flex-1 flex flex-col items-center justify-center text-center">
@@ -26,7 +27,7 @@ export function WelcomeScreen({ onGetStarted }: WelcomeScreenProps) {
           Get Started
         </button>
         <button
-          onClick={onGetStarted}
+          onClick={onSignIn}
           className="w-full bg-white/20 backdrop-blur-sm text-white font-semibold py-4 rounded-2xl border-2 border-white/40 active:scale-95 transition-transform"
         >
           Sign In

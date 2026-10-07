@@ -31,13 +31,15 @@ export function NewAddReminderScreen({ contactId, onBack, onSave }: NewAddRemind
 
     setLoading(true);
     try {
-      await addReminder({
+      // Date-only strings parse as UTC midnight; anchor to 9am local so the day doesn't shift
+      const { error } = await addReminder({
         title: formData.title,
         description: formData.description,
-        due_date: new Date(formData.due_date).toISOString(),
+        due_date: new Date(`${formData.due_date}T09:00:00`).toISOString(),
         contact_id: formData.contact_id || null,
         priority: formData.priority
       });
+      if (error) throw new Error(error);
       onSave();
     } catch (error) {
       console.error('Error creating reminder:', error);

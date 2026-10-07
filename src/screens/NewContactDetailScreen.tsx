@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { ArrowLeft, Mail, Phone, Linkedin, MapPin, Calendar, Tag, Pencil, MessageCircle, Sparkles, Plus, Clock, Send, ExternalLink, CalendarPlus, Download, User, ChevronDown, Mic, MicOff, AlertTriangle, RefreshCw, Brain, Lightbulb } from 'lucide-react';
+import { ArrowLeft, Mail, Phone, Linkedin, MapPin, Calendar, Tag, Pencil, Trash2, Plus, Clock, Send, ExternalLink, CalendarPlus, Download, User, ChevronDown, Mic, MicOff, AlertTriangle, RefreshCw, Brain, Lightbulb } from 'lucide-react';
 import { useContacts } from '../hooks/useContacts';
 import { useReminders } from '../hooks/useReminders';
 import { useAuth } from '../contexts/AuthContext';
@@ -12,6 +12,7 @@ interface NewContactDetailScreenProps {
   onEditContact: (contactId: string) => void;
   onAddReminder: (contactId: string) => void;
   onQuickCapture?: () => void;
+  onDeleted?: () => void;
 }
 
 function SourceChip({ label }: { label: string }) {
@@ -43,8 +44,8 @@ function ConfidenceBadge({ confidence }: { confidence: 'low' | 'medium' | 'high'
   );
 }
 
-export function NewContactDetailScreen({ contactId, onBack, onEditContact, onAddReminder, onQuickCapture }: NewContactDetailScreenProps) {
-  const { contacts, updateContact } = useContacts();
+export function NewContactDetailScreen({ contactId, onBack, onEditContact, onAddReminder, onQuickCapture, onDeleted }: NewContactDetailScreenProps) {
+  const { contacts, updateContact, deleteContact } = useContacts();
   const { reminders } = useReminders();
   const { session } = useAuth();
   const { loading: talkingPointsLoading, result: talkingPointsResult, error: talkingPointsError, generate: generateTalkingPoints, enrichContact } = useTalkingPoints();
@@ -189,10 +190,15 @@ export function NewContactDetailScreen({ contactId, onBack, onEditContact, onAdd
       }
     ];
 
-    await updateContact(contact.id, {
+    const { error } = await updateContact(contact.id, {
       interaction_history: updatedHistory,
       last_contact: new Date().toISOString()
     });
+    if (error) {
+      // Keep the typed note so it isn't lost
+      alert('Failed to save note. Please try again.');
+      return;
+    }
 
     setNewInteraction('');
     setShowAddInteraction(false);
@@ -292,16 +298,36 @@ export function NewContactDetailScreen({ contactId, onBack, onEditContact, onAdd
             )}
           </div>
         </div>
-        <button
-          onClick={(e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            onEditContact(contactId);
-          }}
-          className="p-1 text-orange-600 active:text-orange-800"
-        >
-          <Pencil size={18} />
-        </button>
+        <div className="flex items-center gap-1">
+          <button
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              onEditContact(contactId);
+            }}
+            aria-label="Edit contact"
+            className="p-1 text-orange-600 active:text-orange-800"
+          >
+            <Pencil size={18} />
+          </button>
+          <button
+            onClick={async (e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              if (!confirm(`Delete ${contact.name}? This also removes their notes and talking points. Linked reminders are kept.`)) return;
+              const { error } = await deleteContact(contactId);
+              if (error) {
+                alert('Failed to delete contact. Please try again.');
+                return;
+              }
+              (onDeleted ?? onBack)();
+            }}
+            aria-label="Delete contact"
+            className="p-1 text-slate-400 active:text-red-600"
+          >
+            <Trash2 size={18} />
+          </button>
+        </div>
       </div>
 
       <div className="flex-1 overflow-y-auto pb-24">
@@ -666,7 +692,7 @@ export function NewContactDetailScreen({ contactId, onBack, onEditContact, onAdd
 
                 {Array.isArray(interactionHistory) && interactionHistory.length > 0 ? (
                   <div className="space-y-2">
-                    {[...interactionHistory].reverse().map((interaction: any, index) => (
+                    {[...interactionHistory].reverse().map((interaction, index) => (
                       <div key={index} className="bg-slate-50 rounded-lg p-3 border border-slate-100">
                         <div className="text-xs text-slate-500 mb-1">{formatDateTime(interaction.date)}</div>
                         <div className="text-sm text-slate-700">{interaction.note}</div>
