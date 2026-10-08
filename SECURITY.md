@@ -4,9 +4,8 @@ How Re.Me is protected, what was fixed in the October 2026 audit, and the steps 
 
 ## Deploy checklist (required: the fixes are not live until these run)
 
-1. **Apply the database migration.** In Supabase, open **SQL Editor**, paste
-   `supabase/migrations/20261007115615_protect_profile_role_and_revoke_excess_privileges.sql` (already applied to production via Bolt on 2026-10-07) and run it,
-   or with the CLI: `supabase db push`.
+1. ✅ **Database migration**: `supabase/migrations/20261007115615_protect_profile_role_and_revoke_excess_privileges.sql`
+   was applied to production via Bolt on 2026-10-07. For a new environment: run it in the SQL Editor, or `supabase db push`.
 2. **Check nobody already made themselves admin** (SQL Editor):
    ```sql
    SELECT id, email, role, updated_at FROM public.profiles WHERE role = 'admin';
