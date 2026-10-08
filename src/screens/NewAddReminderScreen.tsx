@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { ArrowLeft } from 'lucide-react';
 import { useReminders } from '../hooks/useReminders';
 import { useContacts } from '../hooks/useContacts';
+import { useFeedback } from '../components/Feedback';
 
 interface NewAddReminderScreenProps {
   contactId?: string;
@@ -10,6 +11,7 @@ interface NewAddReminderScreenProps {
 }
 
 export function NewAddReminderScreen({ contactId, onBack, onSave }: NewAddReminderScreenProps) {
+  const { toast } = useFeedback();
   const { addReminder } = useReminders();
   const { contacts } = useContacts();
   const [loading, setLoading] = useState(false);
@@ -43,7 +45,7 @@ export function NewAddReminderScreen({ contactId, onBack, onSave }: NewAddRemind
       onSave();
     } catch (error) {
       console.error('Error creating reminder:', error);
-      alert('Failed to create reminder. Please try again.');
+      toast('Failed to create reminder. Please try again.', 'error');
     } finally {
       setLoading(false);
     }

@@ -1,7 +1,20 @@
 import { useState, useEffect } from 'react';
-import { ArrowLeft, Camera, X, Plus, Sparkles, ChevronDown, ChevronUp } from 'lucide-react';
+import { ArrowLeft, Camera, X, Plus, Sparkles, ChevronDown, ChevronUp, ScanLine } from 'lucide-react';
 import { useContacts } from '../hooks/useContacts';
-import { supabase } from '../lib/supabase';
+import { invokeFunction } from '../lib/functions';
+import { downscaleImage } from '../lib/image';
+import { useFeedback } from '../components/Feedback';
+
+interface ParsedContact {
+  first_name: string | null;
+  last_name: string | null;
+  job_title: string | null;
+  company: string | null;
+  email: string | null;
+  phone: string | null;
+  linkedin_url: string | null;
+  notes: string | null;
+}
 
 interface FullAddContactScreenProps {
   contactId?: string;
@@ -10,6 +23,7 @@ interface FullAddContactScreenProps {
 }
 
 export function FullAddContactScreen({ contactId, onBack, onSave }: FullAddContactScreenProps) {
+  const { toast } = useFeedback();
   const { contacts, addContact, updateContact } = useContacts();
 
   const isEdit = !!contactId;
@@ -18,6 +32,7 @@ export function FullAddContactScreen({ contactId, onBack, onSave }: FullAddConta
   const [photoPreview, setPhotoPreview] = useState('');
   const [pastedText, setPastedText] = useState('');
   const [smartPasteLoading, setSmartPasteLoading] = useState(false);
+  const [scanning, setScanning] = useState(false);
   const [showSmartPaste, setShowSmartPaste] = useState(!isEdit);
   const [notification, setNotification] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
 
@@ -79,78 +94,82 @@ export function FullAddContactScreen({ contactId, onBack, onSave }: FullAddConta
     setTags(tags.filter(tag => tag !== tagToRemove));
   };
 
+  const showNotification = (type: 'success' | 'error', message: string) => {
+    setNotification({ type, message });
+    setTimeout(() => setNotification(null), 3000);
+  };
+
+  // Sends free text to smart-paste and fills any fields it finds, keeping what's already typed
+  const parseAndFill = async (text: string) => {
+    const result = await invokeFunction<{ success?: boolean; data?: ParsedContact }>(
+      'smart-paste',
+      { text },
+      'Could not read contact details. Please fill in manually.',
+    );
+    if (!result?.success || !result.data) {
+      throw new Error('Could not read contact details. Please fill in manually.');
+    }
+
+    const data = result.data;
+    const fullName = [data.first_name, data.last_name].filter(Boolean).join(' ');
+
+    setFormData(prev => ({
+      ...prev,
+      name: fullName || prev.name,
+      company: data.company || prev.company,
+      title: data.job_title || prev.title,
+      phone: data.phone || prev.phone,
+      email: data.email || prev.email,
+      linkedin_url: data.linkedin_url || prev.linkedin_url,
+      notes: data.notes || prev.notes,
+    }));
+  };
+
   const handleSmartPaste = async () => {
     if (!pastedText.trim()) {
-      setNotification({ type: 'error', message: 'Please paste some text first' });
-      setTimeout(() => setNotification(null), 3000);
+      showNotification('error', 'Please paste some text first');
       return;
     }
 
     setSmartPasteLoading(true);
     try {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
-        setNotification({ type: 'error', message: 'Not authenticated. Please log in.' });
-        setTimeout(() => setNotification(null), 3000);
-        setSmartPasteLoading(false);
-        return;
-      }
-
-      const apiUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/smart-paste`;
-
-
-      const response = await fetch(apiUrl, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${session.access_token}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ text: pastedText }),
-      });
-
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        console.error('Smart-paste error:', errorData);
-        throw new Error(errorData.message || errorData.error || 'Failed to parse text');
-      }
-
-      const result = await response.json();
-
-      if (result.success && result.data) {
-        const data = result.data;
-        const nameParts = [];
-        if (data.first_name) nameParts.push(data.first_name);
-        if (data.last_name) nameParts.push(data.last_name);
-        const fullName = nameParts.length > 0 ? nameParts.join(' ') : null;
-
-        setFormData({
-          ...formData,
-          name: fullName || formData.name,
-          company: data.company || formData.company,
-          title: data.job_title || formData.title,
-          phone: data.phone || formData.phone,
-          email: data.email || formData.email,
-          linkedin_url: data.linkedin_url || formData.linkedin_url,
-          notes: data.notes || formData.notes,
-        });
-
-        setNotification({ type: 'success', message: '✅ Contact details filled in!' });
-        setTimeout(() => setNotification(null), 3000);
-        setShowSmartPaste(false);
-        setPastedText('');
-      } else {
-        throw new Error('Invalid response format');
-      }
+      await parseAndFill(pastedText);
+      showNotification('success', '✅ Contact details filled in!');
+      setShowSmartPaste(false);
+      setPastedText('');
     } catch (error) {
       console.error('Smart paste error:', error);
-      setNotification({
-        type: 'error',
-        message: error instanceof Error ? error.message : 'Could not parse text. Please fill in manually.'
-      });
-      setTimeout(() => setNotification(null), 3000);
+      showNotification('error', error instanceof Error ? error.message : 'Could not parse text. Please fill in manually.');
     } finally {
       setSmartPasteLoading(false);
+    }
+  };
+
+  const handleScanCard = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    // Reset so picking the same photo again still fires onChange
+    e.target.value = '';
+    if (!file) return;
+
+    setScanning(true);
+    try {
+      const imageData = await downscaleImage(file);
+      const ocr = await invokeFunction<{ text?: string }>(
+        'process-ocr',
+        { imageData },
+        'Could not read the card. Try a clearer, well-lit photo.',
+      );
+      const text = ocr?.text?.trim();
+      if (!text) throw new Error('No text found on the card. Try a clearer, well-lit photo.');
+
+      await parseAndFill(text);
+      showNotification('success', '✅ Card scanned. Check the details below.');
+      setShowSmartPaste(false);
+    } catch (error) {
+      console.error('Card scan error:', error);
+      showNotification('error', error instanceof Error ? error.message : 'Could not read the card.');
+    } finally {
+      setScanning(false);
     }
   };
 
@@ -174,7 +193,7 @@ export function FullAddContactScreen({ contactId, onBack, onSave }: FullAddConta
       onSave();
     } catch (error) {
       console.error('Error saving contact:', error);
-      alert('Failed to save contact. Please try again.');
+      toast('Failed to save contact. Please try again.', 'error');
     } finally {
       setLoading(false);
     }
@@ -202,6 +221,34 @@ export function FullAddContactScreen({ contactId, onBack, onSave }: FullAddConta
             }`}>
               {notification.message}
             </div>
+          )}
+
+          {!isEdit && (
+            <label
+              className={`w-full bg-gradient-to-r from-orange-500 to-pink-500 text-white rounded-xl p-4 flex items-center justify-center gap-2 font-semibold shadow-md transition-transform ${
+                scanning ? 'opacity-70 cursor-wait' : 'cursor-pointer active:scale-98'
+              }`}
+            >
+              {scanning ? (
+                <>
+                  <div className="animate-spin h-5 w-5 border-2 border-white border-t-transparent rounded-full"></div>
+                  Reading card...
+                </>
+              ) : (
+                <>
+                  <ScanLine size={20} />
+                  Scan business card
+                </>
+              )}
+              <input
+                type="file"
+                accept="image/*"
+                capture="environment"
+                onChange={handleScanCard}
+                disabled={scanning}
+                className="hidden"
+              />
+            </label>
           )}
 
           {!showSmartPaste ? (

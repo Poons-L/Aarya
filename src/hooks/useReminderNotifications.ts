@@ -67,10 +67,18 @@ export function useReminderNotifications(reminders: Reminder[]) {
       );
 
       const show = (title: string, options: NotificationOptions) => {
+        const full = { icon: '/icon-192.png', badge: '/icon-192.png', ...options };
+        // Mobile browsers (and installed apps) only allow notifications via the service worker
+        if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
+          navigator.serviceWorker.ready
+            .then(reg => reg.showNotification(title, full))
+            .catch(() => undefined);
+          return;
+        }
         try {
-          new Notification(title, { icon: '/vite.svg', ...options });
+          new Notification(title, full);
         } catch {
-          // Some mobile browsers only allow notifications via a service worker
+          // Notification constructor unavailable (e.g. mobile without a service worker)
         }
       };
 

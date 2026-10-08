@@ -2,6 +2,7 @@ import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import NewApp from './NewApp.tsx';
 import { AuthProvider } from './contexts/AuthContext';
+import { FeedbackProvider } from './components/Feedback';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import './index.css';
 
@@ -37,12 +38,24 @@ console.error = (...args) => {
   }
 };
 
+// Service worker: installable app, offline shell, phone notifications.
+// Production only, so the dev server never serves stale cached code.
+if (import.meta.env.PROD && 'serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/sw.js').catch(err => {
+      console.error('Service worker registration failed:', err);
+    });
+  });
+}
+
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <ErrorBoundary>
-      <AuthProvider>
-        <NewApp />
-      </AuthProvider>
+      <FeedbackProvider>
+        <AuthProvider>
+          <NewApp />
+        </AuthProvider>
+      </FeedbackProvider>
     </ErrorBoundary>
   </StrictMode>
 );

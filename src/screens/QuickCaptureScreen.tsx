@@ -2,6 +2,7 @@ import { useState, useRef } from 'react';
 import { ArrowLeft, Camera, Mic, StopCircle } from 'lucide-react';
 import { useContacts } from '../hooks/useContacts';
 import { transcribeAudio as transcribeRecording } from '../lib/transcribe';
+import { useFeedback } from '../components/Feedback';
 
 interface QuickCaptureScreenProps {
   onBack: () => void;
@@ -9,6 +10,7 @@ interface QuickCaptureScreenProps {
 }
 
 export function QuickCaptureScreen({ onBack, onComplete }: QuickCaptureScreenProps) {
+  const { toast } = useFeedback();
   const { addContact } = useContacts();
   const [loading, setLoading] = useState(false);
   const [name, setName] = useState('');
@@ -58,7 +60,7 @@ export function QuickCaptureScreen({ onBack, onComplete }: QuickCaptureScreenPro
         setIsRecording(true);
       } catch (error) {
         console.error('Error starting recording:', error);
-        alert('Failed to access microphone. Please grant permission and try again.');
+        toast('Failed to access microphone. Please grant permission and try again.', 'error');
       }
     } else {
       if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
@@ -86,7 +88,7 @@ export function QuickCaptureScreen({ onBack, onComplete }: QuickCaptureScreenPro
       }
     } catch (error) {
       console.error('Error transcribing audio:', error);
-      alert(error instanceof Error ? error.message : 'Failed to transcribe audio. Please try typing instead.');
+      toast(error instanceof Error ? error.message : 'Failed to transcribe audio. Please try typing instead.', 'error');
     } finally {
       if (forName) {
         setTranscribingName(false);
@@ -120,7 +122,7 @@ export function QuickCaptureScreen({ onBack, onComplete }: QuickCaptureScreenPro
         setIsRecordingName(true);
       } catch (error) {
         console.error('Error starting name recording:', error);
-        alert('Failed to access microphone. Please grant permission and try again.');
+        toast('Failed to access microphone. Please grant permission and try again.', 'error');
       }
     } else {
       if (nameRecorderRef.current && nameRecorderRef.current.state !== 'inactive') {
@@ -146,7 +148,7 @@ export function QuickCaptureScreen({ onBack, onComplete }: QuickCaptureScreenPro
       onComplete();
     } catch (error) {
       console.error('Error saving contact:', error);
-      alert('Failed to save contact. Please try again.');
+      toast('Failed to save contact. Please try again.', 'error');
     } finally {
       setLoading(false);
     }

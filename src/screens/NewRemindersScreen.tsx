@@ -2,6 +2,7 @@ import { useState, useMemo } from 'react';
 import { Bell, Plus, Check, Calendar, AlertCircle, Trash2 } from 'lucide-react';
 import { useReminders, Reminder } from '../hooks/useReminders';
 import { useContacts, Contact } from '../hooks/useContacts';
+import { useFeedback } from '../components/Feedback';
 
 interface NewRemindersScreenProps {
   onNavigate: (screen: string) => void;
@@ -24,6 +25,7 @@ const formatDate = (dateString: string) => {
 };
 
 export function NewRemindersScreen({ onNavigate, onViewContact }: NewRemindersScreenProps) {
+  const { toast, confirm } = useFeedback();
   const { reminders, updateReminder, deleteReminder } = useReminders();
   const { contacts } = useContacts();
   const [filter, setFilter] = useState<'all' | 'upcoming' | 'overdue' | 'completed'>('upcoming');
@@ -86,9 +88,11 @@ export function NewRemindersScreen({ onNavigate, onViewContact }: NewRemindersSc
   };
 
   const handleDelete = async (reminder: Reminder) => {
-    if (!confirm(`Delete reminder "${reminder.title}"?`)) return;
+    const ok = await confirm({ title: 'Delete reminder?', message: reminder.title, confirmLabel: 'Delete', destructive: true });
+    if (!ok) return;
     const { error } = await deleteReminder(reminder.id);
-    if (error) alert('Failed to delete reminder. Please try again.');
+    if (error) toast('Failed to delete reminder. Please try again.', 'error');
+    else toast('Reminder deleted', 'success');
   };
 
   const getContact = (contactId?: string | null) => {

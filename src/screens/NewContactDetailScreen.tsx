@@ -6,6 +6,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useTalkingPoints } from '../hooks/useTalkingPoints';
 import { transcribeAudio as transcribeRecording } from '../lib/transcribe';
 import { downloadVCard, generateHubSpotCSV, generateSalesforceCSV, downloadCSV, createMailtoLink, createCalendarEvent, safeHttpUrl } from '../utils/contactExport';
+import { useFeedback } from '../components/Feedback';
 
 interface NewContactDetailScreenProps {
   contactId: string;
@@ -46,6 +47,7 @@ function ConfidenceBadge({ confidence }: { confidence: 'low' | 'medium' | 'high'
 }
 
 export function NewContactDetailScreen({ contactId, onBack, onEditContact, onAddReminder, onQuickCapture, onDeleted }: NewContactDetailScreenProps) {
+  const { toast, confirm } = useFeedback();
   const { contacts, updateContact, deleteContact } = useContacts();
   const { reminders } = useReminders();
   const { session } = useAuth();
@@ -127,7 +129,7 @@ export function NewContactDetailScreen({ contactId, onBack, onEditContact, onAdd
       setIsRecording(true);
     } catch (error) {
       console.error('Error starting recording:', error);
-      alert('Could not access microphone. Please check permissions.');
+      toast('Could not access microphone. Please check permissions.', 'error');
     }
   };
 
@@ -142,7 +144,7 @@ export function NewContactDetailScreen({ contactId, onBack, onEditContact, onAdd
     setIsTranscribing(true);
     try {
       if (!session?.access_token) {
-        alert('Please sign in to use voice transcription.');
+        toast('Please sign in to use voice transcription.', 'error');
         return;
       }
 
@@ -152,7 +154,7 @@ export function NewContactDetailScreen({ contactId, onBack, onEditContact, onAdd
       }
     } catch (error) {
       console.error('Error transcribing audio:', error);
-      alert(error instanceof Error ? error.message : 'Error transcribing audio. Please try again.');
+      toast(error instanceof Error ? error.message : 'Error transcribing audio. Please try again.', 'error');
     } finally {
       setIsTranscribing(false);
     }
@@ -180,7 +182,7 @@ export function NewContactDetailScreen({ contactId, onBack, onEditContact, onAdd
     });
     if (error) {
       // Keep the typed note so it isn't lost
-      alert('Failed to save note. Please try again.');
+      toast('Failed to save note. Please try again.', 'error');
       return;
     }
 
@@ -299,12 +301,19 @@ export function NewContactDetailScreen({ contactId, onBack, onEditContact, onAdd
             onClick={async (e) => {
               e.preventDefault();
               e.stopPropagation();
-              if (!confirm(`Delete ${contact.name}? This also removes their notes and talking points. Linked reminders are kept.`)) return;
+              const ok = await confirm({
+                title: `Delete ${contact.name}?`,
+                message: 'This also removes their notes and talking points. Linked reminders are kept.',
+                confirmLabel: 'Delete',
+                destructive: true,
+              });
+              if (!ok) return;
               const { error } = await deleteContact(contactId);
               if (error) {
-                alert('Failed to delete contact. Please try again.');
+                toast('Failed to delete contact. Please try again.', 'error');
                 return;
               }
+              toast(`${contact.name} deleted`, 'success');
               (onDeleted ?? onBack)();
             }}
             aria-label="Delete contact"

@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { ArrowLeft, Star, Send, CheckCircle } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
+import { useFeedback } from '../components/Feedback';
 
 interface FeedbackScreenProps {
   onBack: () => void;
@@ -10,6 +11,7 @@ interface FeedbackScreenProps {
 const CATEGORIES = ['Bug Report', 'Feature Request', 'General Feedback', 'UI/UX'] as const;
 
 export function FeedbackScreen({ onBack }: FeedbackScreenProps) {
+  const { toast } = useFeedback();
   const { user } = useAuth();
   const [rating, setRating] = useState(0);
   const [category, setCategory] = useState<string>('');
@@ -35,7 +37,7 @@ export function FeedbackScreen({ onBack }: FeedbackScreenProps) {
       setTimeout(() => onBack(), 1800);
     } catch (err) {
       console.error('Error submitting feedback:', err);
-      alert('Failed to submit feedback. Please try again.');
+      toast('Failed to submit feedback. Please try again.', 'error');
     } finally {
       setLoading(false);
     }

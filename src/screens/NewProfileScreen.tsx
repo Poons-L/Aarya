@@ -1,9 +1,11 @@
 import { useState } from 'react';
-import { User, Mail, Camera, LogOut, Info, Bell, Shield, ChevronRight, Lock, MessageSquare, X, Download } from 'lucide-react';
+import { User, Mail, Camera, LogOut, Info, Bell, Shield, ChevronRight, Lock, MessageSquare, X, Download, Smartphone } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useContacts } from '../hooks/useContacts';
 import { useReminders } from '../hooks/useReminders';
 import { getNotificationsEnabled, setNotificationsEnabled, notificationsSupported } from '../hooks/useReminderNotifications';
+import { useFeedback } from '../components/Feedback';
+import { useInstallPrompt } from '../hooks/useInstallPrompt';
 
 const OWNER_EMAIL = 'chicchori@gmail.com';
 const APP_VERSION = '1.3.0';
@@ -15,6 +17,8 @@ interface NewProfileScreenProps {
 }
 
 export function NewProfileScreen({ onNavigate }: NewProfileScreenProps) {
+  const { toast, confirm } = useFeedback();
+  const { canInstall, showIOSHint, install } = useInstallPrompt();
   const { profile, user, updateProfile, signOut } = useAuth();
   const [editing, setEditing] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -78,14 +82,14 @@ export function NewProfileScreen({ onNavigate }: NewProfileScreenProps) {
       setEditing(false);
     } catch (error) {
       console.error('Error updating profile:', error);
-      alert('Failed to update profile. Please try again.');
+      toast('Failed to update profile. Please try again.', 'error');
     } finally {
       setLoading(false);
     }
   };
 
   const handleSignOut = async () => {
-    if (confirm('Are you sure you want to sign out?')) {
+    if (await confirm({ title: 'Sign out?', confirmLabel: 'Sign out', destructive: true })) {
       await signOut();
       onNavigate('welcome');
     }
@@ -214,6 +218,25 @@ export function NewProfileScreen({ onNavigate }: NewProfileScreenProps) {
             <ChevronRight size={20} className="text-slate-400" />
           </button>
 
+          {(canInstall || showIOSHint) && (
+            <button
+              onClick={async () => {
+                if (canInstall) {
+                  if (await install()) toast('Re.Me installed. Find it on your home screen.', 'success');
+                } else {
+                  toast('In Safari, tap Share, then "Add to Home Screen".', 'info');
+                }
+              }}
+              className="w-full flex items-center justify-between p-4 border-t border-slate-200 active:bg-slate-50 transition-colors"
+            >
+              <div className="flex items-center gap-3">
+                <Smartphone size={20} className="text-slate-600" />
+                <span className="text-slate-900 font-medium">Install app</span>
+              </div>
+              <ChevronRight size={20} className="text-slate-400" />
+            </button>
+          )}
+
           <button
             onClick={() => onNavigate('feedback')}
             className="w-full flex items-center justify-between p-4 border-t border-slate-200 active:bg-slate-50 transition-colors"
@@ -279,7 +302,7 @@ export function NewProfileScreen({ onNavigate }: NewProfileScreenProps) {
                   <div className="pr-4">
                     <div className="font-medium text-slate-900">Reminder alerts</div>
                     <div className="text-xs text-slate-600 mt-1">
-                      Get a browser notification when a follow-up comes due while Re.Me is open.
+                      Get a notification when a follow-up comes due while Re.Me is open. Install the app (Profile → Install app) for the best experience on phones.
                     </div>
                   </div>
                   <button
