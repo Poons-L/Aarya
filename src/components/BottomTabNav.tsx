@@ -34,7 +34,7 @@ export function BottomTabNav({ activeTab, onTabChange, overdueCount = 0 }: Botto
                 }`}
                 strokeWidth={isActive ? 2.5 : 2}
               />
-              {tab.badge && tab.badge > 0 && (
+              {tab.badge !== undefined && tab.badge > 0 && (
                 <div className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 rounded-full flex items-center justify-center">
                   <span className="text-white text-xs font-bold">
                     {tab.badge > 9 ? '9+' : tab.badge}
