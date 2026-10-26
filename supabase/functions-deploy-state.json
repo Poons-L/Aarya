@@ -17,6 +17,10 @@
       "hasChanged": false,
       "hash": "49b95b6aa1ea8a1b92023a5da66551b9ac8269066f4ccd23df9230d39e4ef23ec1d0a8aeb17771e5c08a1c129618a1af457ec4ba1e1bd5fc0f3295ec8efb529a"
     },
+    "get-keys": {
+      "hasChanged": false,
+      "hash": "ac75474527068e8d5e4a825798632efa6c7c75122238b8efcf39a14c5e06e13fc1d0a8aeb17771e5c08a1c129618a1af457ec4ba1e1bd5fc0f3295ec8efb529a"
+    },
     "interaction-prep-agent": {
       "hasChanged": false,
       "hash": "e0e179f7cb206bd2b9f604e0b99b046145bcbecded8a951e44086f21a3b9ff98c1d0a8aeb17771e5c08a1c129618a1af457ec4ba1e1bd5fc0f3295ec8efb529a"
@@ -40,10 +44,6 @@
     "transcribe-audio": {
       "hasChanged": false,
       "hash": "224f8a496cce89c0b19e260110eb3a2891e432da54e13747716e7dcdd4aa4f1bc1d0a8aeb17771e5c08a1c129618a1af457ec4ba1e1bd5fc0f3295ec8efb529a"
-    },
-    "get-keys": {
-      "hasChanged": false,
-      "hash": "61a5727f28d9c7d6dfc215a2480b64465696b976ef257e05a3e2f164cc112537c1d0a8aeb17771e5c08a1c129618a1af457ec4ba1e1bd5fc0f3295ec8efb529a"
     }
   }
 }
