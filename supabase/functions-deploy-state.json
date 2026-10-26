@@ -1,0 +1,49 @@
+{
+  "projectId": "58530376",
+  "functions": {
+    "admin-stats": {
+      "hasChanged": false,
+      "hash": "806b9b05e6f989c5b83088feb1b42a8b15f2162cd7c2e27e25634674c02e24c0c1d0a8aeb17771e5c08a1c129618a1af457ec4ba1e1bd5fc0f3295ec8efb529a"
+    },
+    "enrich-contact": {
+      "hasChanged": false,
+      "hash": "4d857929b77795eb48a13c10ac4f754a7bf37b64425df0687bc5850607db0c4dc1d0a8aeb17771e5c08a1c129618a1af457ec4ba1e1bd5fc0f3295ec8efb529a"
+    },
+    "generate-conversation-starters": {
+      "hasChanged": false,
+      "hash": "e9cb88755ddcbdc594d11b4e05d215e547587a32a50fbee33feca9384e621423c1d0a8aeb17771e5c08a1c129618a1af457ec4ba1e1bd5fc0f3295ec8efb529a"
+    },
+    "generate-talking-points": {
+      "hasChanged": false,
+      "hash": "49b95b6aa1ea8a1b92023a5da66551b9ac8269066f4ccd23df9230d39e4ef23ec1d0a8aeb17771e5c08a1c129618a1af457ec4ba1e1bd5fc0f3295ec8efb529a"
+    },
+    "interaction-prep-agent": {
+      "hasChanged": false,
+      "hash": "e0e179f7cb206bd2b9f604e0b99b046145bcbecded8a951e44086f21a3b9ff98c1d0a8aeb17771e5c08a1c129618a1af457ec4ba1e1bd5fc0f3295ec8efb529a"
+    },
+    "meeting-prep-agent": {
+      "hasChanged": false,
+      "hash": "212511643739aac1d76dd8b69be537407dc58f09bed464a25c0561b0ed6e0a8dc1d0a8aeb17771e5c08a1c129618a1af457ec4ba1e1bd5fc0f3295ec8efb529a"
+    },
+    "process-ocr": {
+      "hasChanged": false,
+      "hash": "bd33545eea8e10df2e12e04c6deaea8efc3ed13d124e4c05902478e26a91ad51c1d0a8aeb17771e5c08a1c129618a1af457ec4ba1e1bd5fc0f3295ec8efb529a"
+    },
+    "smart-paste": {
+      "hasChanged": false,
+      "hash": "ea6987952d6bebefc4214765e26439f2f71223deaacc2be977027113d3a35d08c1d0a8aeb17771e5c08a1c129618a1af457ec4ba1e1bd5fc0f3295ec8efb529a"
+    },
+    "summarize-text": {
+      "hasChanged": false,
+      "hash": "5f7433d7ca78e19b5cac2d8b88328d301979cebc08a82c60eae6a369b56ba3a0c1d0a8aeb17771e5c08a1c129618a1af457ec4ba1e1bd5fc0f3295ec8efb529a"
+    },
+    "transcribe-audio": {
+      "hasChanged": false,
+      "hash": "224f8a496cce89c0b19e260110eb3a2891e432da54e13747716e7dcdd4aa4f1bc1d0a8aeb17771e5c08a1c129618a1af457ec4ba1e1bd5fc0f3295ec8efb529a"
+    },
+    "get-keys": {
+      "hasChanged": false,
+      "hash": "61a5727f28d9c7d6dfc215a2480b64465696b976ef257e05a3e2f164cc112537c1d0a8aeb17771e5c08a1c129618a1af457ec4ba1e1bd5fc0f3295ec8efb529a"
+    }
+  }
+}
