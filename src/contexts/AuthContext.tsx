@@ -18,6 +18,8 @@ interface AuthContextType {
   profile: Profile | null;
   loading: boolean;
   isAdmin: boolean;
+  connectionError: string | null;
+  retryConnection: () => void;
   signUp: (email: string, password: string, fullName: string) => Promise<{ error: AuthError | null }>;
   signIn: (email: string, password: string) => Promise<{ error: AuthError | null }>;
   signInWithGoogle: () => Promise<{ error: AuthError | null }>;
@@ -34,14 +36,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [connectionError, setConnectionError] = useState<string | null>(null);
+  const [retryCount, setRetryCount] = useState(0);
 
   useEffect(() => {
+    let timeout: ReturnType<typeof setTimeout>;
+    let cancelled = false;
+
     const fetchProfile = async (userId: string) => {
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from('profiles')
         .select('*')
         .eq('id', userId)
         .maybeSingle();
+
+      if (error && error.message.includes('Invalid API key')) {
+        setConnectionError('Unable to connect to the database. The app may be undergoing maintenance.');
+        return;
+      }
 
       if (data) {
         setProfile(data);
@@ -50,11 +62,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     };
 
     const createProfileIfNeeded = async (user: User) => {
-      const { data: existingProfile } = await supabase
+      const { data: existingProfile, error } = await supabase
         .from('profiles')
         .select('*')
         .eq('id', user.id)
         .maybeSingle();
+
+      if (error && error.message.includes('Invalid API key')) {
+        setConnectionError('Unable to connect to the database. The app may be undergoing maintenance.');
+        return;
+      }
 
       if (!existingProfile) {
         const { error: profileError } = await supabase
@@ -73,7 +90,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     };
 
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    timeout = setTimeout(() => {
+      if (cancelled) return;
+      if (loading) {
+        setConnectionError('Connection is taking longer than expected. The database may be unreachable.');
+        setLoading(false);
+      }
+    }, 10000);
+
+    supabase.auth.getSession().then(({ data: { session }, error }) => {
+      if (cancelled) return;
+      clearTimeout(timeout);
+
+      if (error) {
+        console.error('Session error:', error);
+        setConnectionError('Unable to connect to the database. The app may be undergoing maintenance.');
+        setLoading(false);
+        return;
+      }
+
       setSession(session);
       setUser(session?.user ?? null);
       if (session?.user) {
@@ -83,6 +118,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setProfile(null);
         setIsAdmin(false);
       }
+      setConnectionError(null);
+      setLoading(false);
+    }).catch((err) => {
+      if (cancelled) return;
+      clearTimeout(timeout);
+      console.error('getSession failed:', err);
+      setConnectionError('Unable to connect to the database. The app may be undergoing maintenance.');
       setLoading(false);
     });
 
@@ -97,12 +139,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           setProfile(null);
           setIsAdmin(false);
         }
+        setConnectionError(null);
         setLoading(false);
       })();
     });
 
-    return () => subscription.unsubscribe();
-  }, []);
+    return () => {
+      cancelled = true;
+      clearTimeout(timeout);
+      subscription.unsubscribe();
+    };
+  }, [retryCount]);
+
+  const retryConnection = () => {
+    setConnectionError(null);
+    setLoading(true);
+    setRetryCount(c => c + 1);
+  };
 
   const signUp = async (email: string, password: string, fullName: string) => {
     const { data, error } = await supabase.auth.signUp({
@@ -199,6 +252,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     profile,
     loading,
     isAdmin,
+    connectionError,
+    retryConnection,
     signUp,
     signIn,
     signInWithGoogle,

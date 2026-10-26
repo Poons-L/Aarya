@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { RefreshCw, AlertTriangle } from 'lucide-react';
 import { WelcomeScreen } from './screens/WelcomeScreen';
 import { OnboardingScreen } from './screens/OnboardingScreen';
 import { AuthScreen } from './screens/AuthScreen';
@@ -30,7 +31,7 @@ function NewApp() {
   const [navState, setNavState] = useState<NavState>({ screen: 'welcome', contactId: null });
   const [history, setHistory] = useState<NavState[]>([]);
 
-  const { user, loading: authLoading } = useAuth();
+  const { user, loading: authLoading, connectionError, retryConnection } = useAuth();
   const { reminders } = useReminders();
   useReminderNotifications(reminders);
 
@@ -85,6 +86,27 @@ function NewApp() {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-amber-400 via-orange-500 to-pink-500">
         <div className="text-white text-xl font-semibold">Loading...</div>
+      </div>
+    );
+  }
+
+  if (connectionError) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-slate-50">
+        <div className="w-full max-w-[400px] px-6 text-center">
+          <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-orange-100 flex items-center justify-center">
+            <AlertTriangle size={32} className="text-orange-500" />
+          </div>
+          <h2 className="text-xl font-bold text-slate-900 mb-2">Connection Problem</h2>
+          <p className="text-slate-600 mb-6 text-sm">{connectionError}</p>
+          <button
+            onClick={retryConnection}
+            className="inline-flex items-center gap-2 bg-orange-500 text-white font-semibold px-6 py-3 rounded-xl shadow-lg active:scale-95 transition-transform"
+          >
+            <RefreshCw size={18} />
+            Try Again
+          </button>
+        </div>
       </div>
     );
   }
